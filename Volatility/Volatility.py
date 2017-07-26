@@ -7,6 +7,7 @@ from javax.swing import JButton
 
 from org.sleuthkit.autopsy.ingest import IngestModuleFactoryAdapter
 from org.sleuthkit.autopsy.ingest import IngestModuleIngestJobSettingsPanel
+from org.sleuthkit.autopsy.ingest import DataSourceIngestModule
 
 
 class IngestModuleFactory(IngestModuleFactoryAdapter):
@@ -93,3 +94,19 @@ class SettingsUIPanel(IngestModuleIngestJobSettingsPanel):
         self.gridBagConstraints.anchor = GridBagConstraints.NORTH
         self.gridBagPanel.setConstraints(self.FindVolatilityPathButton, self.gridBagConstraints)
         self.mainPanel.add(self.FindVolatilityPathButton)
+
+
+class IngestModule(DataSourceIngestModule):
+    def __init__(self, settings):
+        self.context = None
+        self.localSettings = settings
+        self.databaseFile = ""
+        self.isAutodetect = False
+        self.AdditionalParams = ""
+        self.PythonProgram = False
+
+    def startUp(self, context):
+        self.context = context
+
+    def process(self, dataSource, progressBar):
+        progressBar.switchToIndeterminate()
