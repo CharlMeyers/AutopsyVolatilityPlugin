@@ -1,3 +1,5 @@
+import inspect
+
 from java.awt import GridBagLayout
 from java.awt import GridBagConstraints
 from javax.swing import JPanel
@@ -5,13 +7,16 @@ from javax.swing import JLabel
 from javax.swing import JTextField
 from javax.swing import JButton
 
+from java.util.logging import Level
+
 from org.sleuthkit.autopsy.ingest import IngestModuleFactoryAdapter
 from org.sleuthkit.autopsy.ingest import IngestModuleIngestJobSettingsPanel
 from org.sleuthkit.autopsy.ingest import IngestModuleIngestJobSettings
 from org.sleuthkit.autopsy.ingest import DataSourceIngestModule
+from org.sleuthkit.autopsy.coreutils import Logger
 
 
-class IngestModuleFactory(IngestModuleFactoryAdapter):
+class VolatilityIngestModuleFactory(IngestModuleFactoryAdapter):
     def __init__(self):
         self.settings = None
         self.moduleName = "Volatility Processor"
@@ -26,36 +31,39 @@ class IngestModuleFactory(IngestModuleFactoryAdapter):
         return "1.0"
 
     def getDefaultIngestJobSettings(self):
-        return IngestModuleSettings
+        return VolatilityIngestModuleSettings()
 
     def hasIngestJobSettingsPanel(self):
         return True
 
     def getIngestJobSettingsPanel(self, settings):
-        if not isinstance(settings, IngestModuleSettings):
+        if not isinstance(settings, VolatilityIngestModuleSettings):
             raise IllegalArgumentException("Settings expected to be instnce of SampleIngestModuleSettings")
         self.settings = settings
 
-        return IngestModuleUISettingsPanel(self.settings)
+        return VolatilityIngestModuleUISettingsPanel(self.settings)
 
     def isDataSourceIngestModule(self):
         return True
 
     def createDataSourceIngestModule(self, ingestOptions):
-        return IngestModule(self.settings)
+        return VolatilityIngestModule(self.settings)
 
 
-class IngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
+class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
     def __init__(self, settings):
         self.local_settings = settings
         self.initLayout()
+
+    def findDir(self):
+        rand = 2
 
     def initLayout(self):
         self.mainPanel = JPanel()
 
         self.gridBagPanel = GridBagLayout()
         self.gridBagConstraints = GridBagConstraints()
-        self.mainPanel.setLayout(self.gridBagConstraints)
+        self.mainPanel.setLayout(self.gridBagPanel)
 
         # Volatility Executable Path
         self.dirLabel = JLabel("Volatility Executable Directory")
@@ -84,9 +92,9 @@ class IngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.gridBagPanel.setConstraints(self.volatilityDirTextField, self.gridBagConstraints)
         self.mainPanel.add(self.volatilityDirTextField)
 
-        self.FindVolatilityPathButton = JButton("Find Dir", actionPerformed=self.Find_Dir)
+        self.FindVolatilityPathButton = JButton("Find Dir", actionPerformed=self.findDir)
         self.FindVolatilityPathButton.setEnabled(True)
-        self.rbgmainPanel.add(self.FindVolatilityPathButton)
+        # self.rbgmainPanel.add(self.FindVolatilityPathButton)
         self.gridBagConstraints.gridx = 6
         self.gridBagConstraints.gridy = 3
         self.gridBagConstraints.gridwidth = 1
@@ -99,7 +107,7 @@ class IngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.mainPanel.add(self.FindVolatilityPathButton)
 
 
-class IngestModule(DataSourceIngestModule):
+class VolatilityIngestModule(DataSourceIngestModule):
     def __init__(self, settings):
         self.context = None
         self.localSettings = settings
@@ -107,14 +115,24 @@ class IngestModule(DataSourceIngestModule):
         self.isAutodetect = False
         self.AdditionalParams = ""
         self.PythonProgram = False
+        # self.logger = Logger.getLogger(VolatilityIngestModuleFactory.moduleName)
+        # self.setupLogger()
+
+    def setupLogger(self):
+        self.logger.setLogDirectory("ModuleLogs")
+
+    def log(self, level, message):
+        self.logger.logp(level, self.__class__.__name__, inspect.stack()[1][3], message)
 
     def startUp(self, context):
         self.context = context
 
+        self.log(Level.INFO, "Volatility Module Loaded")
+
     def process(self, dataSource, progressBar):
         progressBar.switchToIndeterminate()
 
-class IngestModuleSettings(IngestModuleIngestJobSettings):
+class VolatilityIngestModuleSettings(IngestModuleIngestJobSettings):
     def __init__(self):
         self.versionUID = 1L
         self.VolatilityDir = ""
