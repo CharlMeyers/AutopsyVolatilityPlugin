@@ -7,6 +7,7 @@ from javax.swing import JButton
 
 from org.sleuthkit.autopsy.ingest import IngestModuleFactoryAdapter
 from org.sleuthkit.autopsy.ingest import IngestModuleIngestJobSettingsPanel
+from org.sleuthkit.autopsy.ingest import IngestModuleIngestJobSettings
 from org.sleuthkit.autopsy.ingest import DataSourceIngestModule
 
 
@@ -19,30 +20,32 @@ class IngestModuleFactory(IngestModuleFactoryAdapter):
         return self.moduleName
 
     def getModuleDescription(self):
-        return "Run Volatility agains a Memory Image"
+        return "Run Volatility against a Memory Image"
 
     def getModuleVersionNumber(self):
         return "1.0"
 
-    # def getDefaultIngestJobSettings(self):
-    #     return None
+    def getDefaultIngestJobSettings(self):
+        return IngestModuleSettings
 
     def hasIngestJobSettingsPanel(self):
         return True
 
     def getIngestJobSettingsPanel(self, settings):
+        if not isinstance(settings, IngestModuleSettings):
+            raise IllegalArgumentException("Settings expected to be instnce of SampleIngestModuleSettings")
         self.settings = settings
 
-        return SettingsUIPanel(self.settings)
+        return IngestModuleUISettingsPanel(self.settings)
 
     def isDataSourceIngestModule(self):
-        True
+        return True
 
     def createDataSourceIngestModule(self, ingestOptions):
-        return None
+        return IngestModule(self.settings)
 
 
-class SettingsUIPanel(IngestModuleIngestJobSettingsPanel):
+class IngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
     def __init__(self, settings):
         self.local_settings = settings
         self.initLayout()
@@ -110,3 +113,32 @@ class IngestModule(DataSourceIngestModule):
 
     def process(self, dataSource, progressBar):
         progressBar.switchToIndeterminate()
+
+class IngestModuleSettings(IngestModuleIngestJobSettings):
+    def __init__(self):
+        self.versionUID = 1L
+        self.VolatilityDir = ""
+        self.Version = "2.5"
+        self.Profile = "Autodetect"
+
+    # Getters and setters
+    def getVersionUID(self):
+        return self.versionUID
+
+    def getVolatilityDir(self):
+        return self.VolatilityDir
+
+    def getVersion(self):
+        return self.Version
+
+    def getProfile(self):
+        return self.Profile
+
+    def setVolatilityDir(self, dir):
+        self.VolatilityDir = dir
+
+    def setVersion(self, version):
+        self.Version = version
+
+    def setProfile(self, profile):
+        self.Profile = profile
