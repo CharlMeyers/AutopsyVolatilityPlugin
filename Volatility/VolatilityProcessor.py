@@ -7,6 +7,7 @@ from javax.swing import JLabel
 from javax.swing import JTextField
 from javax.swing import JButton
 from javax.swing import JFileChooser
+from javax.swing import JComboBox
 from javax.swing.filechooser import FileNameExtensionFilter
 
 from java.util.logging import Level
@@ -77,6 +78,18 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
                                                   "Volatity executable at " + canonicalPath)
         IngestServices.getInstance().postMessage(message)
 
+    def saveExecDir(self, event):
+        rand = 0
+
+    def getProfiles(self):
+        return []
+
+    def changeVersion(self):
+        rand = 0
+
+    def changeProfile(self):
+        reand = 0
+
     def getSettings(self):
         return self.localSettings
 
@@ -114,9 +127,8 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.gridBagPanel.setConstraints(self.volatilityDirTextField, self.gridBagConstraints)
         self.mainPanel.add(self.volatilityDirTextField)
 
-        self.FindVolatilityPathButton = JButton("Find Dir", actionPerformed=self.findDir)
-        self.FindVolatilityPathButton.setEnabled(True)
-        # self.rbgmainPanel.add(self.FindVolatilityPathButton)
+        self.findVolatilityPathButton = JButton("Find Dir", actionPerformed=self.findDir)
+        self.findVolatilityPathButton.setEnabled(True)
         self.gridBagConstraints.gridx = 6
         self.gridBagConstraints.gridy = 3
         self.gridBagConstraints.gridwidth = 1
@@ -125,8 +137,76 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.gridBagConstraints.weightx = 1
         self.gridBagConstraints.weighty = 0
         self.gridBagConstraints.anchor = GridBagConstraints.NORTH
-        self.gridBagPanel.setConstraints(self.FindVolatilityPathButton, self.gridBagConstraints)
-        self.mainPanel.add(self.FindVolatilityPathButton)
+        self.gridBagPanel.setConstraints(self.findVolatilityPathButton, self.gridBagConstraints)
+        self.mainPanel.add(self.findVolatilityPathButton)
+
+        # Save dir button
+        self.saveExecButton = JButton("Save Volatility Exec Dir", actionPerformed=self.saveExecDir)
+        self.saveExecButton.setEnabled(True)
+        self.gridBagConstraints.gridx = 2
+        self.gridBagConstraints.gridy = 7
+        self.gridBagConstraints.gridwidth = 1
+        self.gridBagConstraints.gridheight = 1
+        self.gridBagConstraints.fill = GridBagConstraints.BOTH
+        self.gridBagConstraints.weightx = 1
+        self.gridBagConstraints.weighty = 0
+        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
+        self.gridBagPanel.setConstraints(self.saveExecButton, self.gridBagConstraints)
+        self.mainPanel.add(self.saveExecButton)
+
+        # Version selector
+        self.versionLabel = JLabel("Version:")
+        self.gridBagConstraints.gridx = 2
+        self.gridBagConstraints.gridy = 11
+        self.gridBagConstraints.gridwidth = 1
+        self.gridBagConstraints.gridheight = 1
+        self.gridBagConstraints.fill = GridBagConstraints.BOTH
+        self.gridBagConstraints.weightx = 1
+        self.gridBagConstraints.weighty = 0
+        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
+        self.gridBagPanel.setConstraints(self.versionLabel, self.gridBagConstraints)
+        self.mainPanel.add(self.versionLabel)
+
+        self.versionList = ("2.5", "2.6")
+        self.versionComboBox = JComboBox(self.versionList)
+        self.versionComboBox.itemStateChanged = self.changeVersion
+        self.gridBagConstraints.gridx = 6
+        self.gridBagConstraints.gridy = 11
+        self.gridBagConstraints.gridwidth = 1
+        self.gridBagConstraints.gridheight = 1
+        self.gridBagConstraints.fill = GridBagConstraints.BOTH
+        self.gridBagConstraints.weightx = 1
+        self.gridBagConstraints.weighty = 0
+        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
+        self.gridBagPanel.setConstraints(self.versionComboBox, self.gridBagConstraints)
+        self.mainPanel.add(self.versionComboBox)
+
+        # Profile selector
+        self.profileLabel = JLabel("Profile:")
+        self.gridBagConstraints.gridx = 2
+        self.gridBagConstraints.gridy = 19
+        self.gridBagConstraints.gridwidth = 1
+        self.gridBagConstraints.gridheight = 1
+        self.gridBagConstraints.fill = GridBagConstraints.BOTH
+        self.gridBagConstraints.weightx = 1
+        self.gridBagConstraints.weighty = 0
+        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
+        self.gridBagPanel.setConstraints(self.profileLabel, self.gridBagConstraints)
+        self.mainPanel.add(self.profileLabel)
+
+        self.profileList = self.getProfiles
+        self.profileComboBox = JComboBox(self.profileList)
+        self.profileComboBox.itemStateChanged = self.changeProfile
+        self.gridBagConstraints.gridx = 6
+        self.gridBagConstraints.gridy = 19
+        self.gridBagConstraints.gridwidth = 1
+        self.gridBagConstraints.gridheight = 1
+        self.gridBagConstraints.fill = GridBagConstraints.BOTH
+        self.gridBagConstraints.weightx = 1
+        self.gridBagConstraints.weighty = 1
+        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
+        self.gridBagPanel.setConstraints(self.profileComboBox, self.gridBagConstraints)
+        self.mainPanel.add(self.profileComboBox)
 
         self.add(self.mainPanel)
 
