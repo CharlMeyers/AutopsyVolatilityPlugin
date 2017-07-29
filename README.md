@@ -15,6 +15,6 @@ The plugin will create it's own hash of the memory dump given to it and validate
 
 The reason for this is that any possible modification of the memory image is avoided and therefore the change of the evidence being thrown out in court is reduced.
 
-Huge credit must go to **Mark Mckinnon** for allowing users to modify the code of his Autopsy Plugins. Go and check out his git profile [here](https://github.com/markmckinnon).
+Huge credit must go to **Mark McKinnon** for allowing users to modify the code of his Autopsy Plugins. Go and check out his git profile [here](https://github.com/markmckinnon).
 
 The plugin in this repository is a modified version of his plugin. Most notably volatility plugins do not get chosen, but rather a pre set number of plugins are run

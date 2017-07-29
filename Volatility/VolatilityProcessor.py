@@ -260,6 +260,20 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.gridBagPanel.setConstraints(self.profileComboBox, self.gridBagConstraints)
         self.mainPanel.add(self.profileComboBox)
 
+        # Message
+        self.messageLabel = JLabel("")
+        self.messageLabel.setEnabled(True)
+        self.gridBagConstraints.gridx = 2
+        self.gridBagConstraints.gridy = 31
+        self.gridBagConstraints.gridwidth = 1
+        self.gridBagConstraints.gridheight = 1
+        self.gridBagConstraints.fill = GridBagConstraints.BOTH
+        self.gridBagConstraints.weightx = 1
+        self.gridBagConstraints.weighty = 0
+        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
+        self.gridBagPanel.setConstraints(self.messageLabel, self.gridBagConstraints)
+        self.mainPanel.add(self.messageLabel)
+
         self.add(self.mainPanel)
 
 
@@ -271,8 +285,8 @@ class VolatilityIngestModule(DataSourceIngestModule):
         self.isAutodetect = False
         self.AdditionalParams = ""
         self.PythonProgram = False
-        # self.logger = Logger.getLogger(VolatilityIngestModuleFactory.moduleName)
-        # self.setupLogger()
+        self.logger = Logger.getLogger(VolatilityIngestModuleFactory.moduleName)
+        self.setupLogger()
 
     def setupLogger(self):
         self.logger.setLogDirectory("ModuleLogs")
