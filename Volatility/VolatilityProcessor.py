@@ -6,6 +6,8 @@ from javax.swing import JPanel
 from javax.swing import JLabel
 from javax.swing import JTextField
 from javax.swing import JButton
+from javax.swing import JFileChooser
+from javax.swing.filechooser import FileNameExtensionFilter
 
 from java.util.logging import Level
 
@@ -14,6 +16,8 @@ from org.sleuthkit.autopsy.ingest import IngestModuleIngestJobSettingsPanel
 from org.sleuthkit.autopsy.ingest import IngestModuleIngestJobSettings
 from org.sleuthkit.autopsy.ingest import DataSourceIngestModule
 from org.sleuthkit.autopsy.coreutils import Logger
+from org.sleuthkit.autopsy.ingest import IngestMessage
+from org.sleuthkit.autopsy.ingest import IngestServices
 
 
 class VolatilityIngestModuleFactory(IngestModuleFactoryAdapter):
@@ -56,7 +60,22 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.initLayout()
 
     def findDir(self, event):
-        rand = 2
+        fileChooser = JFileChooser()
+        fileExtentionFilter = FileNameExtensionFilter("Executable Files (*.exe)", ["exe"])
+        fileChooser.addChoosableFileFilter(fileExtentionFilter)
+
+        result = fileChooser.showDialog(self.mainPanel, "Select File")
+
+        if result == JFileChooser.APPROVE_OPTION:
+            file = fileChooser.getSelectedFile()
+            canonicalPath = file.getCanonicalPath()
+
+            self.localSettings.setVolatilityDir(canonicalPath)
+            self.volatilityDirTextField.setText(canonicalPath)
+            message = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
+                                                  "Volatiity Executable Found",
+                                                  "Volatity executable at " + canonicalPath)
+        IngestServices.getInstance().postMessage(message)
 
     def getSettings(self):
         return self.localSettings
@@ -136,6 +155,7 @@ class VolatilityIngestModule(DataSourceIngestModule):
 
     def process(self, dataSource, progressBar):
         progressBar.switchToIndeterminate()
+
 
 class VolatilityIngestModuleSettings(IngestModuleIngestJobSettings):
     def __init__(self):
