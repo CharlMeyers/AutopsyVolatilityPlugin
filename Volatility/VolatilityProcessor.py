@@ -1,4 +1,5 @@
 import inspect
+import os
 
 from java.awt import GridBagLayout
 from java.awt import GridBagConstraints
@@ -11,6 +12,8 @@ from javax.swing import JComboBox
 from javax.swing.filechooser import FileNameExtensionFilter
 
 from java.util.logging import Level
+from java.sql import DriverManager, SQLException
+from java.lang import Class
 
 from org.sleuthkit.autopsy.ingest import IngestModuleFactoryAdapter
 from org.sleuthkit.autopsy.ingest import IngestModuleIngestJobSettingsPanel
@@ -57,8 +60,36 @@ class VolatilityIngestModuleFactory(IngestModuleFactoryAdapter):
 
 class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
     def __init__(self, settings):
+        head, tail = os.path.split(os.path.abspath(__file__))
+        self.absolutePath = head
+        self.database = head + "\\VolatilitySettings.db"
         self.localSettings = settings
         self.initLayout()
+        self.checkDatabase()
+
+    def checkDatabase(self):
+        runInsertStatements = False
+        if not os.path.isfile(self.database):
+            runInsertStatements = True
+
+        connection = None
+
+        try:
+            Class.forName("org.sqlite.JDBC").newInstance()
+            connection = DriverManager.getConnection("jdbc:sqlite:" + self.database)
+            if runInsertStatements:
+                with open(self.absolutePath + "\\InsertStatements.sql", "r") as file:
+                    query = file.readlines()
+                    preparedStatement = connection.prepareStatement(''.join(query))
+                    preparedStatement.executeUpdate()
+
+                    self.messageLabel.setText("Database created successfully")
+                # preparedStatement.close()
+        except SQLException as ex:
+            self.messageLabel.setText("Error opening settings DB:\n" + ex.message)
+        finally:
+            if connection:
+                connection.close()
 
     def findDir(self, event):
         fileChooser = JFileChooser()
@@ -76,7 +107,7 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
             message = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
                                                   "Volatiity Executable Found",
                                                   "Volatity executable at " + canonicalPath)
-        IngestServices.getInstance().postMessage(message)
+            IngestServices.getInstance().postMessage(message)
 
     def saveExecDir(self, event):
         rand = 0
@@ -260,7 +291,46 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.gridBagPanel.setConstraints(self.profileComboBox, self.gridBagConstraints)
         self.mainPanel.add(self.profileComboBox)
 
+        self.Blank5 = JLabel(" ")
+        self.Blank5.setEnabled(True)
+        self.gridBagConstraints.gridx = 2
+        self.gridBagConstraints.gridy = 13
+        self.gridBagConstraints.gridwidth = 1
+        self.gridBagConstraints.gridheight = 1
+        self.gridBagConstraints.fill = GridBagConstraints.BOTH
+        self.gridBagConstraints.weightx = 1
+        self.gridBagConstraints.weighty = 0
+        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
+        self.gridBagPanel.setConstraints(self.Blank5, self.gridBagConstraints)
+        self.mainPanel.add(self.Blank5)
+
+        self.Blank6 = JLabel(" ")
+        self.Blank6.setEnabled(True)
+        self.gridBagConstraints.gridx = 2
+        self.gridBagConstraints.gridy = 22
+        self.gridBagConstraints.gridwidth = 1
+        self.gridBagConstraints.gridheight = 1
+        self.gridBagConstraints.fill = GridBagConstraints.BOTH
+        self.gridBagConstraints.weightx = 1
+        self.gridBagConstraints.weighty = 0
+        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
+        self.gridBagPanel.setConstraints(self.Blank6, self.gridBagConstraints)
+        self.mainPanel.add(self.Blank6)
+
         # Message
+        self.Label3 = JLabel("Message:")
+        self.Label3.setEnabled(True)
+        self.gridBagConstraints.gridx = 2
+        self.gridBagConstraints.gridy = 24
+        self.gridBagConstraints.gridwidth = 1
+        self.gridBagConstraints.gridheight = 1
+        self.gridBagConstraints.fill = GridBagConstraints.BOTH
+        self.gridBagConstraints.weightx = 1
+        self.gridBagConstraints.weighty = 0
+        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
+        self.gridBagPanel.setConstraints(self.Label3, self.gridBagConstraints)
+        self.mainPanel.add(self.Label3)
+        
         self.messageLabel = JLabel("")
         self.messageLabel.setEnabled(True)
         self.gridBagConstraints.gridx = 2
