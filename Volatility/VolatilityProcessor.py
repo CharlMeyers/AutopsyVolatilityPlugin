@@ -52,11 +52,14 @@ class VolatilityIngestModuleFactory(IngestModuleFactoryAdapter):
 
 class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
     def __init__(self, settings):
-        self.local_settings = settings
+        self.localSettings = settings
         self.initLayout()
 
-    def findDir(self):
+    def findDir(self, event):
         rand = 2
+
+    def getSettings(self):
+        return self.localSettings
 
     def initLayout(self):
         self.mainPanel = JPanel()
@@ -105,6 +108,8 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.gridBagConstraints.anchor = GridBagConstraints.NORTH
         self.gridBagPanel.setConstraints(self.FindVolatilityPathButton, self.gridBagConstraints)
         self.mainPanel.add(self.FindVolatilityPathButton)
+
+        self.add(self.mainPanel)
 
 
 class VolatilityIngestModule(DataSourceIngestModule):
