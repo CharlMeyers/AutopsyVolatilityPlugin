@@ -65,7 +65,7 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.database = head + "\\VolatilitySettings.db"
         self.localSettings = settings
         self.initLayout()
-        self.checkDatabase()
+        # self.checkDatabaseAndPopulateFields()
 
     def checkDatabase(self):
         runInsertStatements = False
@@ -88,7 +88,6 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
                                 preparedStatement.executeUpdate()
                             except SQLException as ex:
                                 self.messageLabel.setText("Error at: " + query + "<br />" + ex.message)
-
                     self.messageLabel.setText("Database created successfully")
         except SQLException as ex:
             self.messageLabel.setText("Error opening settings DB:\n" + ex.message)
@@ -118,7 +117,30 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         rand = 0
 
     def getProfiles(self):
-        return []
+        connection = None
+        statement = None
+
+        try:
+            Class.forName("org.sqlite.JDBC").newInstance()
+            connection = DriverManager.getConnection("jdbc:sqlite:" + self.database)
+
+            statement = connection.createStatement()
+            query = "SELECT name FROM profiles WHERE version = '" + self.versionComboBox.getSelectedItem() + "';"
+            results = statement.executeQuery(query)
+            profiles = []
+            while results.next():
+                profiles.append(results.getString("name"))
+
+            statement.close()
+            connection.close()
+            return profiles
+        except SQLException as ex:
+            self.messageLabel.setText("Error opening settings DB:\n" + ex.message)
+        finally:
+            if statement:
+                statement.close()
+            if connection:
+                connection.close()
 
     def changeVersion(self):
         rand = 0
@@ -135,6 +157,35 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.gridBagPanel = GridBagLayout()
         self.gridBagConstraints = GridBagConstraints()
         self.mainPanel.setLayout(self.gridBagPanel)
+
+        # Message
+        self.Label3 = JLabel("Message:")
+        self.Label3.setEnabled(True)
+        self.gridBagConstraints.gridx = 2
+        self.gridBagConstraints.gridy = 24
+        self.gridBagConstraints.gridwidth = 1
+        self.gridBagConstraints.gridheight = 1
+        self.gridBagConstraints.fill = GridBagConstraints.BOTH
+        self.gridBagConstraints.weightx = 1
+        self.gridBagConstraints.weighty = 0
+        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
+        self.gridBagPanel.setConstraints(self.Label3, self.gridBagConstraints)
+        self.mainPanel.add(self.Label3)
+
+        self.messageLabel = JLabel("")
+        self.messageLabel.setEnabled(True)
+        self.gridBagConstraints.gridx = 2
+        self.gridBagConstraints.gridy = 31
+        self.gridBagConstraints.gridwidth = 1
+        self.gridBagConstraints.gridheight = 1
+        self.gridBagConstraints.fill = GridBagConstraints.BOTH
+        self.gridBagConstraints.weightx = 1
+        self.gridBagConstraints.weighty = 0
+        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
+        self.gridBagPanel.setConstraints(self.messageLabel, self.gridBagConstraints)
+        self.mainPanel.add(self.messageLabel)
+
+        self.checkDatabase()
 
         # Volatility Executable Path
         self.dirLabel = JLabel("Volatility Executable Directory")
@@ -244,6 +295,7 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
 
         self.versionList = ("2.5", "2.6")
         self.versionComboBox = JComboBox(self.versionList)
+        # self.versionComboBox.setSelectedItem("2.5")
         self.versionComboBox.itemStateChanged = self.changeVersion
         self.gridBagConstraints.gridx = 7
         self.gridBagConstraints.gridy = 11
@@ -321,33 +373,6 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.gridBagConstraints.anchor = GridBagConstraints.NORTH
         self.gridBagPanel.setConstraints(self.Blank6, self.gridBagConstraints)
         self.mainPanel.add(self.Blank6)
-
-        # Message
-        self.Label3 = JLabel("Message:")
-        self.Label3.setEnabled(True)
-        self.gridBagConstraints.gridx = 2
-        self.gridBagConstraints.gridy = 24
-        self.gridBagConstraints.gridwidth = 1
-        self.gridBagConstraints.gridheight = 1
-        self.gridBagConstraints.fill = GridBagConstraints.BOTH
-        self.gridBagConstraints.weightx = 1
-        self.gridBagConstraints.weighty = 0
-        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
-        self.gridBagPanel.setConstraints(self.Label3, self.gridBagConstraints)
-        self.mainPanel.add(self.Label3)
-        
-        self.messageLabel = JLabel("")
-        self.messageLabel.setEnabled(True)
-        self.gridBagConstraints.gridx = 2
-        self.gridBagConstraints.gridy = 31
-        self.gridBagConstraints.gridwidth = 1
-        self.gridBagConstraints.gridheight = 1
-        self.gridBagConstraints.fill = GridBagConstraints.BOTH
-        self.gridBagConstraints.weightx = 1
-        self.gridBagConstraints.weighty = 0
-        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
-        self.gridBagPanel.setConstraints(self.messageLabel, self.gridBagConstraints)
-        self.mainPanel.add(self.messageLabel)
 
         self.add(self.mainPanel)
 
