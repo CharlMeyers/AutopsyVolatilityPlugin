@@ -79,12 +79,17 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
             connection = DriverManager.getConnection("jdbc:sqlite:" + self.database)
             if runInsertStatements:
                 with open(self.absolutePath + "\\InsertStatements.sql", "r") as file:
-                    query = file.readlines()
-                    preparedStatement = connection.prepareStatement(''.join(query))
-                    preparedStatement.executeUpdate()
+                    count = 0
+                    for query in file:
+                        if query != "" and "--" not in query:
+                            count += 1
+                            try:
+                                preparedStatement = connection.prepareStatement(query)
+                                preparedStatement.executeUpdate()
+                            except SQLException as ex:
+                                self.messageLabel.setText("Error at: " + query + "<br />" + ex.message)
 
                     self.messageLabel.setText("Database created successfully")
-                # preparedStatement.close()
         except SQLException as ex:
             self.messageLabel.setText("Error opening settings DB:\n" + ex.message)
         finally:
