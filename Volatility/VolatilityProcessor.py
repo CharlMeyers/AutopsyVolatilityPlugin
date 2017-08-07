@@ -65,7 +65,6 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.database = head + "\\VolatilitySettings.db"
         self.localSettings = settings
         self.initLayout()
-        # self.checkDatabaseAndPopulateFields()
 
     def checkDatabase(self):
         runInsertStatements = False
@@ -73,6 +72,7 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
             runInsertStatements = True
 
         connection = None
+        statement= None
 
         try:
             Class.forName("org.sqlite.JDBC").newInstance()
@@ -81,6 +81,7 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
                 with open(self.absolutePath + "\\InsertStatements.sql", "r") as file:
                     count = 0
                     for query in file:
+                        # Exclude any lines that are empty or contain comment
                         if query != "" and "--" not in query:
                             count += 1
                             try:
@@ -89,8 +90,25 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
                             except SQLException as ex:
                                 self.messageLabel.setText("Error at: " + query + "<br />" + ex.message)
                     self.messageLabel.setText("Database created successfully")
+
+            try:
+                statement = connection.createStatement()
+                query = 'SELECT name, value FROM settings'
+                results = statement.executeQuery(query)
+                while results.next():
+                    if results.getString("name") == "VolatilityExecutableDirectory":
+                        self.volatilityDirTextField.setText(results.getString("value"))
+                        self.localSettings.setVolatilityDir(results.getString("value"))
+                    if results.getString("name") == "VolatilityVersion":
+                        self.versionComboBox.setSelectedItem(results.getString("value"))
+                self.messageLabel.setText("Saved settings loaded successfully")
+            except SQLException as ex:
+                self.messageLabel.setText("Error reading settings database: " + ex.message)
+            finally:
+                if statement:
+                    statement.close()
         except SQLException as ex:
-            self.messageLabel.setText("Error opening settings DB:\n" + ex.message)
+            self.messageLabel.setText("Error opening settings DB: " + ex.message)
         finally:
             if connection:
                 connection.close()
@@ -114,7 +132,47 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
             IngestServices.getInstance().postMessage(message)
 
     def saveSettings(self, event):
-        rand = 0
+        connection = None
+        statement = None
+
+        try:
+            Class.forName("org.sqlite.JDBC").newInstance()
+            connection = DriverManager.getConnection("jdbc:sqlite:" + self.database)
+
+            try:
+                statement = connection.createStatement()
+                query = 'SELECT count(*) as RowCount FROM settings'
+                results = statement.executeQuery(query)
+                settingsCount = results.getString("RowCount")
+
+                if settingsCount > 0:
+                    directoryStatement = connection.prepareStatement(
+                        "UPDATE settings SET value = ? WHERE name = 'VolatilityExecutableDirectory';")
+                    versionStatement = connection.prepareStatement(
+                        "UPDATE settings SET value = ? WHERE name = 'VolatilityVersion';")
+                else:
+                    directoryStatement = connection.prepareStatement(
+                        "INSERT INTO settings (name, value) VALUES ('VolatilityExecutableDirectory', ?);")
+                    versionStatement = connection.prepareStatement(
+                        "INSERT INTO settings (name, value) VALUES ('VolatilityVersion', ?);")
+
+                directoryStatement.setString(1, self.volatilityDirTextField.getText())
+                versionStatement.setString(1, self.versionComboBox.getSelectedItem())
+
+                directoryStatement.executeUpdate()
+                versionStatement.executeUpdate()
+                self.messageLabel.setText("Settings saved successfully")
+                self.localSettings.setVolatilityDir(self.volatilityDirTextField.getText())
+            except SQLException as ex:
+                self.messageLabel.setText("Error reading settings database: " + ex.message)
+        except SQLException as ex:
+            self.messageLabel.setText("Error opening settings DB: " + ex.message)
+        finally:
+            if statement:
+                statement.close()
+
+            if connection:
+                connection.close()
 
     def getProfiles(self):
         connection = None
@@ -144,14 +202,14 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
                 connection.close()
 
     def changeVersion(self, event):
-        # version = self.versionComboBox.getSelectedItem()
+        self.localSettings.setVersion(event.item)
         profileList = self.getProfiles()
         self.profileComboBox.removeAllItems()
         for profile in profileList:
             self.profileComboBox.addItem(profile)
 
     def changeProfile(self, event):
-        reand = 0
+        self.localSettings.setProfile(event.item)
 
     def getSettings(self):
         return self.localSettings
