@@ -113,7 +113,7 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
                                                   "Volatity executable at " + canonicalPath)
             IngestServices.getInstance().postMessage(message)
 
-    def saveExecDir(self, event):
+    def saveSettings(self, event):
         rand = 0
 
     def getProfiles(self):
@@ -124,15 +124,16 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
             Class.forName("org.sqlite.JDBC").newInstance()
             connection = DriverManager.getConnection("jdbc:sqlite:" + self.database)
 
+            version = self.versionComboBox.getSelectedItem()
             statement = connection.createStatement()
-            query = "SELECT name FROM profiles WHERE version = '" + self.versionComboBox.getSelectedItem() + "';"
+            query = "SELECT name FROM profiles WHERE version = '" + version + "';"
             results = statement.executeQuery(query)
             profiles = []
             while results.next():
                 profiles.append(results.getString("name"))
 
-            statement.close()
-            connection.close()
+            # statement.close()
+            # connection.close()
             return profiles
         except SQLException as ex:
             self.messageLabel.setText("Error opening settings DB:\n" + ex.message)
@@ -142,10 +143,14 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
             if connection:
                 connection.close()
 
-    def changeVersion(self):
-        rand = 0
+    def changeVersion(self, event):
+        # version = self.versionComboBox.getSelectedItem()
+        profileList = self.getProfiles()
+        self.profileComboBox.removeAllItems()
+        for profile in profileList:
+            self.profileComboBox.addItem(profile)
 
-    def changeProfile(self):
+    def changeProfile(self, event):
         reand = 0
 
     def getSettings(self):
@@ -157,35 +162,6 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.gridBagPanel = GridBagLayout()
         self.gridBagConstraints = GridBagConstraints()
         self.mainPanel.setLayout(self.gridBagPanel)
-
-        # Message
-        self.Label3 = JLabel("Message:")
-        self.Label3.setEnabled(True)
-        self.gridBagConstraints.gridx = 2
-        self.gridBagConstraints.gridy = 24
-        self.gridBagConstraints.gridwidth = 1
-        self.gridBagConstraints.gridheight = 1
-        self.gridBagConstraints.fill = GridBagConstraints.BOTH
-        self.gridBagConstraints.weightx = 1
-        self.gridBagConstraints.weighty = 0
-        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
-        self.gridBagPanel.setConstraints(self.Label3, self.gridBagConstraints)
-        self.mainPanel.add(self.Label3)
-
-        self.messageLabel = JLabel("")
-        self.messageLabel.setEnabled(True)
-        self.gridBagConstraints.gridx = 2
-        self.gridBagConstraints.gridy = 31
-        self.gridBagConstraints.gridwidth = 1
-        self.gridBagConstraints.gridheight = 1
-        self.gridBagConstraints.fill = GridBagConstraints.BOTH
-        self.gridBagConstraints.weightx = 1
-        self.gridBagConstraints.weighty = 0
-        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
-        self.gridBagPanel.setConstraints(self.messageLabel, self.gridBagConstraints)
-        self.mainPanel.add(self.messageLabel)
-
-        self.checkDatabase()
 
         # Volatility Executable Path
         self.dirLabel = JLabel("Volatility Executable Directory")
@@ -214,19 +190,6 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.gridBagPanel.setConstraints(self.volatilityDirTextField, self.gridBagConstraints)
         self.mainPanel.add(self.volatilityDirTextField)
 
-        self.Blank1 = JLabel(" ")
-        self.Blank1.setEnabled(True)
-        self.gridBagConstraints.gridx = 6
-        self.gridBagConstraints.gridy = 5
-        self.gridBagConstraints.gridwidth = 1
-        self.gridBagConstraints.gridheight = 1
-        self.gridBagConstraints.fill = GridBagConstraints.BOTH
-        self.gridBagConstraints.weightx = 1
-        self.gridBagConstraints.weighty = 0
-        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
-        self.gridBagPanel.setConstraints(self.Blank1, self.gridBagConstraints)
-        self.mainPanel.add(self.Blank1)
-
         self.findVolatilityPathButton = JButton("Find Dir", actionPerformed=self.findDir)
         self.findVolatilityPathButton.setEnabled(True)
         self.gridBagConstraints.gridx = 7
@@ -239,33 +202,6 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.gridBagConstraints.anchor = GridBagConstraints.NORTH
         self.gridBagPanel.setConstraints(self.findVolatilityPathButton, self.gridBagConstraints)
         self.mainPanel.add(self.findVolatilityPathButton)
-
-        self.Blank2 = JLabel(" ")
-        self.Blank2.setEnabled(True)
-        self.gridBagConstraints.gridx = 2
-        self.gridBagConstraints.gridy = 5
-        self.gridBagConstraints.gridwidth = 1
-        self.gridBagConstraints.gridheight = 1
-        self.gridBagConstraints.fill = GridBagConstraints.BOTH
-        self.gridBagConstraints.weightx = 1
-        self.gridBagConstraints.weighty = 0
-        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
-        self.gridBagPanel.setConstraints(self.Blank2, self.gridBagConstraints)
-        self.mainPanel.add(self.Blank2)
-
-        # Save dir button
-        self.saveExecButton = JButton("Save Volatility Exec Dir", actionPerformed=self.saveExecDir)
-        self.saveExecButton.setEnabled(True)
-        self.gridBagConstraints.gridx = 2
-        self.gridBagConstraints.gridy = 7
-        self.gridBagConstraints.gridwidth = 1
-        self.gridBagConstraints.gridheight = 1
-        self.gridBagConstraints.fill = GridBagConstraints.BOTH
-        self.gridBagConstraints.weightx = 1
-        self.gridBagConstraints.weighty = 0
-        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
-        self.gridBagPanel.setConstraints(self.saveExecButton, self.gridBagConstraints)
-        self.mainPanel.add(self.saveExecButton)
 
         self.Blank3 = JLabel(" ")
         self.Blank3.setEnabled(True)
@@ -295,7 +231,6 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
 
         self.versionList = ("2.5", "2.6")
         self.versionComboBox = JComboBox(self.versionList)
-        # self.versionComboBox.setSelectedItem("2.5")
         self.versionComboBox.itemStateChanged = self.changeVersion
         self.gridBagConstraints.gridx = 7
         self.gridBagConstraints.gridy = 11
@@ -361,8 +296,8 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.gridBagPanel.setConstraints(self.Blank5, self.gridBagConstraints)
         self.mainPanel.add(self.Blank5)
 
-        self.Blank6 = JLabel(" ")
-        self.Blank6.setEnabled(True)
+        self.Blank2 = JLabel(" ")
+        self.Blank2.setEnabled(True)
         self.gridBagConstraints.gridx = 2
         self.gridBagConstraints.gridy = 22
         self.gridBagConstraints.gridwidth = 1
@@ -371,8 +306,64 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.gridBagConstraints.weightx = 1
         self.gridBagConstraints.weighty = 0
         self.gridBagConstraints.anchor = GridBagConstraints.NORTH
+        self.gridBagPanel.setConstraints(self.Blank2, self.gridBagConstraints)
+        self.mainPanel.add(self.Blank2)
+
+        # Save button
+        self.saveButton = JButton("Save Settings", actionPerformed=self.saveSettings)
+        self.saveButton.setEnabled(True)
+        self.gridBagConstraints.gridx = 2
+        self.gridBagConstraints.gridy = 24
+        self.gridBagConstraints.gridwidth = 1
+        self.gridBagConstraints.gridheight = 1
+        self.gridBagConstraints.fill = GridBagConstraints.BOTH
+        self.gridBagConstraints.weightx = 1
+        self.gridBagConstraints.weighty = 0
+        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
+        self.gridBagPanel.setConstraints(self.saveButton, self.gridBagConstraints)
+        self.mainPanel.add(self.saveButton)
+
+        self.Blank6 = JLabel(" ")
+        self.Blank6.setEnabled(True)
+        self.gridBagConstraints.gridx = 2
+        self.gridBagConstraints.gridy = 26
+        self.gridBagConstraints.gridwidth = 1
+        self.gridBagConstraints.gridheight = 1
+        self.gridBagConstraints.fill = GridBagConstraints.BOTH
+        self.gridBagConstraints.weightx = 1
+        self.gridBagConstraints.weighty = 0
+        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
         self.gridBagPanel.setConstraints(self.Blank6, self.gridBagConstraints)
         self.mainPanel.add(self.Blank6)
+
+        # Message
+        self.Label3 = JLabel("Message:")
+        self.Label3.setEnabled(True)
+        self.gridBagConstraints.gridx = 2
+        self.gridBagConstraints.gridy = 27
+        self.gridBagConstraints.gridwidth = 1
+        self.gridBagConstraints.gridheight = 1
+        self.gridBagConstraints.fill = GridBagConstraints.BOTH
+        self.gridBagConstraints.weightx = 1
+        self.gridBagConstraints.weighty = 0
+        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
+        self.gridBagPanel.setConstraints(self.Label3, self.gridBagConstraints)
+        self.mainPanel.add(self.Label3)
+
+        self.messageLabel = JLabel("")
+        self.messageLabel.setEnabled(True)
+        self.gridBagConstraints.gridx = 2
+        self.gridBagConstraints.gridy = 31
+        self.gridBagConstraints.gridwidth = 1
+        self.gridBagConstraints.gridheight = 1
+        self.gridBagConstraints.fill = GridBagConstraints.BOTH
+        self.gridBagConstraints.weightx = 2
+        self.gridBagConstraints.weighty = 0
+        self.gridBagConstraints.anchor = GridBagConstraints.NORTH
+        self.gridBagPanel.setConstraints(self.messageLabel, self.gridBagConstraints)
+        self.mainPanel.add(self.messageLabel)
+
+        self.checkDatabase()
 
         self.add(self.mainPanel)
 

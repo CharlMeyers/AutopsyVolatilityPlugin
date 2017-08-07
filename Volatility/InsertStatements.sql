@@ -38,6 +38,7 @@ INSERT INTO profiles (name, description, version) VALUES ('WinXPSP1x64','A Profi
 INSERT INTO profiles (name, description, version) VALUES ('WinXPSP2x64','A Profile for Windows XP SP2 x64','2.5');
 INSERT INTO profiles (name, description, version) VALUES ('WinXPSP2x86','A Profile for Windows XP SP2 x86','2.5');
 INSERT INTO profiles (name, description, version) VALUES ('WinXPSP3x86','A Profile for Windows XP SP3 x86','2.5');
+INSERT INTO profiles (name, description, version) VALUES ('Autodetect', 'A profile to autodetect OS profiel', '2.5');
 
 -- Profiles for Volatility 2.6 Insert Statements
 INSERT INTO profiles (name, description, version) VALUES ('VistaSP0x64','A Profile for Windows Vista SP0 x64','2.6');
@@ -85,3 +86,4 @@ INSERT INTO profiles (name, description, version) VALUES ('WinXPSP1x64','A Profi
 INSERT INTO profiles (name, description, version) VALUES ('WinXPSP2x64','A Profile for Windows XP SP2 x64','2.6');
 INSERT INTO profiles (name, description, version) VALUES ('WinXPSP2x86','A Profile for Windows XP SP2 x86','2.6');
 INSERT INTO profiles (name, description, version) VALUES ('WinXPSP3x86','A Profile for Windows XP SP3 x86','2.6');
+INSERT INTO profiles (name, description, version) VALUES ('Autodetect', 'A profile to autodetect OS profiel', '2.6');
