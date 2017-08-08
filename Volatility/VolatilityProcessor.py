@@ -22,12 +22,14 @@ from org.sleuthkit.autopsy.ingest import DataSourceIngestModule
 from org.sleuthkit.autopsy.coreutils import Logger
 from org.sleuthkit.autopsy.ingest import IngestMessage
 from org.sleuthkit.autopsy.ingest import IngestServices
-
+from org.sleuthkit.autopsy.ingest.IngestModule import IngestModuleException
+from org.sleuthkit.autopsy.casemodule import Case
 
 class VolatilityIngestModuleFactory(IngestModuleFactoryAdapter):
     def __init__(self):
         self.settings = None
-        self.moduleName = "Volatility Processor"
+
+    moduleName = "Volatility Processor"
 
     def getModuleDisplayName(self):
         return self.moduleName
@@ -51,7 +53,7 @@ class VolatilityIngestModuleFactory(IngestModuleFactoryAdapter):
 
         return VolatilityIngestModuleUISettingsPanel(self.settings)
 
-    def isDataSourceIngestModule(self):
+    def isDataSourceIngestModuleFactory(self):
         return True
 
     def createDataSourceIngestModule(self, ingestOptions):
@@ -128,10 +130,6 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
 
             self.localSettings.setVolatilityDir(canonicalPath)
             self.volatilityDirTextField.setText(canonicalPath)
-            message = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
-                                                  "Volatiity Executable Found",
-                                                  "Volatity executable at " + canonicalPath)
-            IngestServices.getInstance().postMessage(message)
 
     def saveSettings(self, event):
         connection = None
@@ -444,13 +442,11 @@ class VolatilityIngestModule(DataSourceIngestModule):
         self.localSettings = settings
         self.databaseFile = ""
         self.isAutodetect = False
-        self.AdditionalParams = ""
-        self.PythonProgram = False
         self.logger = Logger.getLogger(VolatilityIngestModuleFactory.moduleName)
-        self.setupLogger()
+        # self.setupLogger()
 
-    def setupLogger(self):
-        self.logger.setLogDirectory("ModuleLogs")
+    # def setupLogger(self):
+    #     self.logger.setLogDirectory("ModuleLogs")
 
     def log(self, level, message):
         self.logger.logp(level, self.__class__.__name__, inspect.stack()[1][3], message)
@@ -460,8 +456,46 @@ class VolatilityIngestModule(DataSourceIngestModule):
 
         self.log(Level.INFO, "Volatility Module Loaded")
 
+        self.VolatilityDir = self.localSettings.getVolatilityDir()
+        self.Profile = self.localSettings.getProfile()
+
+        if self.Profile == 'Autodetect':
+            self.isAutodetect = True
+        else:
+            self.isAutodetect = False
+
+        message = "<ul>" + \
+            "<li>Volatility executable at: " + self.VolatilityDir + "</li>" + \
+            "<li>Selected profile: " + self.Profile + "</li>" + "</ul>"
+
+        inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
+                                              "Volatiity Settings Loaded", message)
+        IngestServices.getInstance().postMessage(inbox)
+
+        if not os.path.exists(self.VolatilityDir):
+            raise IngestModuleException("Volatility executable does not exist")
+
     def process(self, dataSource, progressBar):
         progressBar.switchToIndeterminate()
+        inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
+                                            "Volatiity Process Started")
+        IngestServices.getInstance().postMessage(inbox)
+
+        case = Case.getCurrentCase().getSleuthkitCase()
+        fileManager = Case.getCurrentCase().getServices().getFileManager()
+        files = fileManager.findFiles(dataSource, "%", "/")
+
+        message = "<p>File names to process:</p> <ul>"
+        for file in files:
+            message += "<li>" + str(file) + "</li>"
+
+        message += "</ul>"
+
+        inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
+                                            "Volatiity Process Information", message)
+        IngestServices.getInstance().postMessage(inbox)
+
+        # self.log(Level.INFO, "Datasource filename: ")
 
 
 class VolatilityIngestModuleSettings(IngestModuleIngestJobSettings):
