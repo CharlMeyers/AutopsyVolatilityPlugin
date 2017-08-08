@@ -101,6 +101,8 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
                         self.localSettings.setVolatilityDir(results.getString("value"))
                     if results.getString("name") == "VolatilityVersion":
                         self.versionComboBox.setSelectedItem(results.getString("value"))
+                    if results.getString("name") == "VolatilityProfile":
+                        self.profileComboBox.setSelectedItem(results.getString("value"))
                 self.messageLabel.setText("Saved settings loaded successfully")
             except SQLException as ex:
                 self.messageLabel.setText("Error reading settings database: " + ex.message)
@@ -143,24 +145,34 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
                 statement = connection.createStatement()
                 query = 'SELECT count(*) as RowCount FROM settings'
                 results = statement.executeQuery(query)
-                settingsCount = results.getString("RowCount")
+                settingsCount = int(results.getString("RowCount"))
 
-                if settingsCount > 0:
+                if settingsCount > 3:
                     directoryStatement = connection.prepareStatement(
-                        "UPDATE settings SET value = ? WHERE name = 'VolatilityExecutableDirectory';")
+                        "UPDATE settings SET value = ? WHERE name = 'VolatilityExecutableDirectory';"
+                    )
                     versionStatement = connection.prepareStatement(
-                        "UPDATE settings SET value = ? WHERE name = 'VolatilityVersion';")
+                        "UPDATE settings SET value = ? WHERE name = 'VolatilityVersion';"
+                    )
+                    profileStatement = connection.prepareStatement(
+                        "UPDATE settings SET value = ? WHERE name = 'VolatilityProfile';"
+                    )
                 else:
                     directoryStatement = connection.prepareStatement(
                         "INSERT INTO settings (name, value) VALUES ('VolatilityExecutableDirectory', ?);")
                     versionStatement = connection.prepareStatement(
                         "INSERT INTO settings (name, value) VALUES ('VolatilityVersion', ?);")
+                    profileStatement = connection.prepareStatement(
+                        "INSERT INTO settings (name, value) VALUES ('VolatilityProfile', ?);"
+                    )
 
                 directoryStatement.setString(1, self.volatilityDirTextField.getText())
                 versionStatement.setString(1, self.versionComboBox.getSelectedItem())
+                profileStatement.setString(1, self.profileComboBox.getSelectedItem())
 
                 directoryStatement.executeUpdate()
                 versionStatement.executeUpdate()
+                profileStatement.executeUpdate()
                 self.messageLabel.setText("Settings saved successfully")
                 self.localSettings.setVolatilityDir(self.volatilityDirTextField.getText())
             except SQLException as ex:
