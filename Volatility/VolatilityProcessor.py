@@ -1,5 +1,6 @@
 import inspect
 import os
+import hashlib
 
 from java.awt import GridBagLayout
 from java.awt import GridBagConstraints
@@ -22,6 +23,7 @@ from org.sleuthkit.autopsy.ingest import DataSourceIngestModule
 from org.sleuthkit.autopsy.coreutils import Logger
 from org.sleuthkit.autopsy.ingest import IngestMessage
 from org.sleuthkit.autopsy.ingest import IngestServices
+from org.sleuthkit.autopsy.ingest import IngestModule
 from org.sleuthkit.autopsy.ingest.IngestModule import IngestModuleException
 from org.sleuthkit.autopsy.casemodule import Case
 
@@ -443,19 +445,12 @@ class VolatilityIngestModule(DataSourceIngestModule):
         self.databaseFile = ""
         self.isAutodetect = False
         self.logger = Logger.getLogger(VolatilityIngestModuleFactory.moduleName)
-        # self.setupLogger()
-
-    # def setupLogger(self):
-    #     self.logger.setLogDirectory("ModuleLogs")
 
     def log(self, level, message):
         self.logger.logp(level, self.__class__.__name__, inspect.stack()[1][3], message)
 
     def startUp(self, context):
         self.context = context
-
-        self.log(Level.INFO, "Volatility Module Loaded")
-
         self.VolatilityDir = self.localSettings.getVolatilityDir()
         self.Profile = self.localSettings.getProfile()
 
@@ -475,10 +470,14 @@ class VolatilityIngestModule(DataSourceIngestModule):
         if not os.path.exists(self.VolatilityDir):
             raise IngestModuleException("Volatility executable does not exist")
 
+        self.log(Level.INFO, "Volatility Processor Loaded")
+
     def process(self, dataSource, progressBar):
+        logHeader = "Volatility Processor -- "
         progressBar.switchToIndeterminate()
+        BLOCKSIZE = 200 * 1024 * 1024 # about 200 megabyte
         inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
-                                            "Volatiity Process Started")
+                                            "Volatility Process Started")
         IngestServices.getInstance().postMessage(inbox)
 
         case = Case.getCurrentCase().getSleuthkitCase()
@@ -487,15 +486,80 @@ class VolatilityIngestModule(DataSourceIngestModule):
 
         message = "<p>File names to process:</p> <ul>"
         for file in files:
-            message += "<li>" + str(file) + "</li>"
-
+            imageFilePath = file.getLocalAbsPath()
+            if imageFilePath is not None:
+                self.log(Level.INFO, "Volatility Processor -- File paths to process: " + imageFilePath)
+                fileName = os.path.basename(imageFilePath)
+                message += "<li>" + fileName + "</li>"
         message += "</ul>"
 
         inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
-                                            "Volatiity Process Information", message)
+                                            "Volatility Process File Information", message)
         IngestServices.getInstance().postMessage(inbox)
 
-        # self.log(Level.INFO, "Datasource filename: ")
+        # Verifying
+        inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
+                                            "Verifying files")
+        IngestServices.getInstance().postMessage(inbox)
+        progressBar.progress("Verifying files")
+        validMessage = "<p>Valid Files</p><ul>"
+        validFiles = ""
+        invalidFiles = ""
+        cannotValidateList = []
+        cannotValidateMessage = ""
+        for file in files:
+            imageFilePath = file.getLocalAbsPath()
+            if imageFilePath is not None:
+                fileName = os.path.basename(imageFilePath)
+                containingFolder = os.path.dirname(imageFilePath)
+                self.log(Level.INFO, logHeader + "Containing directory of file: " + containingFolder)
+                self.log(Level.INFO, logHeader + "Verifying " + fileName)
+
+                hashFile = fileName[:-4] + ".Hash.txt"
+                hashFilePath = containingFolder + "\\" + hashFile
+                self.log(Level.INFO, logHeader + "Filename containing verification hash: " + hashFile)
+                if os.path.exists(hashFilePath):
+                    fileHash = ""
+                    md5 = hashlib.md5()
+                    with open(imageFilePath, "rb") as fileToValidate:
+                        fileChunk = fileToValidate.read(BLOCKSIZE)
+                        while len(fileChunk) > 0:
+                            md5.update(fileChunk)
+                            fileChunk = fileToValidate.read(BLOCKSIZE)
+                        fileHash = md5.hexdigest()
+                    self.log(Level.INFO, logHeader + "File hash for " + fileName + ": " + fileHash)
+
+                    with open(hashFilePath, "r") as verificationFile:
+                        verificationHash = verificationFile.readline().decode("ascii", "ignore")
+                        if verificationHash == fileHash:
+                            self.log(Level.INFO, logHeader + fileName + " has been verified")
+                            validFiles += "<li>" + fileName + "</li>"
+                        else:
+                            self.log(Level.WARNING, logHeader + fileName + " is invalid")
+                            self.log(Level.INFO, logHeader + "verification file hash: " + verificationHash)
+                            invalidFiles += "<li>" + fileName + "</li>"
+                            invalidFiles += "<ul><li>Computed hash: " + fileHash + "</li><li>Hash in verification file: " + \
+                                            verificationHash + "</li></ul>"
+                else:
+                    self.log(Level.WARNING, logHeader + "Verification file does not exist")
+                    cannotValidateMessage += "<li>" + fileName + "</li>"
+                    cannotValidateList.append(fileName)
+
+        validMessage += validFiles + "</ul><p>Invalid files</p><ul>" + invalidFiles + \
+                        "</ul><p>Cannot validate due to missing validation file</p><ul>" + cannotValidateMessage + "</ul>"
+        inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
+                                            "Verifying files result", validMessage)
+        IngestServices.getInstance().postMessage(inbox)
+
+        return IngestModule.ProcessResult.OK
+
+    def shutDown(self):
+        inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
+                                            "Volatiity Process Stopped")
+        IngestServices.getInstance().postMessage(inbox)
+
+        self.log(Level.INFO, "Volatility Processor Finished")
+
 
 
 class VolatilityIngestModuleSettings(IngestModuleIngestJobSettings):
