@@ -1,6 +1,7 @@
 import inspect
 import os
 import hashlib
+from VolatilityService import VolatilityServiceClass
 
 from java.awt import GridBagLayout
 from java.awt import GridBagConstraints
@@ -483,6 +484,11 @@ class VolatilityIngestModule(DataSourceIngestModule):
         case = Case.getCurrentCase().getSleuthkitCase()
         fileManager = Case.getCurrentCase().getServices().getFileManager()
         files = fileManager.findFiles(dataSource, "%", "/")
+        caseDir = Case.getCurrentCase().getModulesOutputDirAbsPath()
+        connection = None
+        statement = None
+
+        self.log(Level.INFstatementO, logHeader + "Case directory: " + caseDir)
 
         message = "<p>File names to process:</p> <ul>"
         for file in files:
@@ -550,6 +556,39 @@ class VolatilityIngestModule(DataSourceIngestModule):
         inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
                                             "Verifying files result", validMessage)
         IngestServices.getInstance().postMessage(inbox)
+
+        # Processing
+        try:
+            Class.forName("org.sqlite.JDBC").newInstance
+            VolatilityService = VolatilityServiceClass(self.VolatilityDir, self.Profile, caseDir + "\\VolatilityResults.db3")
+            progressBar.switchToDeterminate(3)
+            for file in files:
+                imageFilePath = file.getLocalAbsPath()
+                containingFolder = os.path.dirname(imageFilePath)
+                if imageFilePath is not None:
+                    fileName = os.path.basename(imageFilePath)
+                    if fileName not in invalidFiles:
+                        filePathToProcess = containingFolder + fileName
+                        progressBar.progress("Hivelist", 2)
+                        self.log(Level.INFO, logHeader + "File to process: " + filePathToProcess)
+                        result = VolatilityService.hivescan(filePathToProcess)
+                        self.log(Level.INFO, logHeader + "Hivelist result: " + result)
+                        connection = DriverManager.getConnection("jdbc:sqlite:" + caseDir + "\\VolatilityResults.db3")
+                        statement = connection.createStatement()
+                        systemVirtualAddress = statement.executeQuery("SELECT Virtual FROM HiveList WHERE Name LIKE '%SYSTEM'")
+                        samVirtualAddress = statement.executeQuery("SELECT Virtual FROM HiveList WHERE Name LIKE '%SAM'")
+
+                        result = VolatilityService.getPasswords(filePathToProcess, systemVirtualAddress, samVirtualAddress)
+                        self.log(Level.INFO, logHeader + "Hashdump result: " + result)
+        except SQLException as ex:
+            self.log(Level.SERVERE, logHeader + "Cannot continue scan due to database errors: " + ex.message)
+            raise ex
+        finally:
+            if connection is not None:
+                connection.close()
+
+            if statement is not None:
+                statement.close()
 
         return IngestModule.ProcessResult.OK
 
