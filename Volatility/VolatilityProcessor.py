@@ -16,6 +16,8 @@ from javax.swing.filechooser import FileNameExtensionFilter
 from java.util.logging import Level
 from java.sql import DriverManager, SQLException
 from java.lang import Class
+from java.lang import System
+from java.lang import Exception
 
 from org.sleuthkit.autopsy.ingest import IngestModuleFactoryAdapter
 from org.sleuthkit.autopsy.ingest import IngestModuleIngestJobSettingsPanel
@@ -485,10 +487,13 @@ class VolatilityIngestModule(DataSourceIngestModule):
         fileManager = Case.getCurrentCase().getServices().getFileManager()
         files = fileManager.findFiles(dataSource, "%", "/")
         caseDir = Case.getCurrentCase().getModulesOutputDirAbsPath()
+        try:
+            os.mkdir(caseDir + "\VolatilityProcessor")
+        except OSError:
+            self.log(Level.WARNING, logHeader + "VolatilityProcessor directory already exists")
         connection = None
-        statement = None
 
-        self.log(Level.INFstatementO, logHeader + "Case directory: " + caseDir)
+        self.log(Level.INFO, logHeader + "Case directory: " + caseDir)
 
         message = "<p>File names to process:</p> <ul>"
         for file in files:
@@ -511,45 +516,46 @@ class VolatilityIngestModule(DataSourceIngestModule):
         validMessage = "<p>Valid Files</p><ul>"
         validFiles = ""
         invalidFiles = ""
-        cannotValidateList = []
+        invalidList = []
         cannotValidateMessage = ""
-        for file in files:
-            imageFilePath = file.getLocalAbsPath()
-            if imageFilePath is not None:
-                fileName = os.path.basename(imageFilePath)
-                containingFolder = os.path.dirname(imageFilePath)
-                self.log(Level.INFO, logHeader + "Containing directory of file: " + containingFolder)
-                self.log(Level.INFO, logHeader + "Verifying " + fileName)
-
-                hashFile = fileName[:-4] + ".Hash.txt"
-                hashFilePath = containingFolder + "\\" + hashFile
-                self.log(Level.INFO, logHeader + "Filename containing verification hash: " + hashFile)
-                if os.path.exists(hashFilePath):
-                    fileHash = ""
-                    md5 = hashlib.md5()
-                    with open(imageFilePath, "rb") as fileToValidate:
-                        fileChunk = fileToValidate.read(BLOCKSIZE)
-                        while len(fileChunk) > 0:
-                            md5.update(fileChunk)
-                            fileChunk = fileToValidate.read(BLOCKSIZE)
-                        fileHash = md5.hexdigest()
-                    self.log(Level.INFO, logHeader + "File hash for " + fileName + ": " + fileHash)
-
-                    with open(hashFilePath, "r") as verificationFile:
-                        verificationHash = verificationFile.readline().decode("ascii", "ignore")
-                        if verificationHash == fileHash:
-                            self.log(Level.INFO, logHeader + fileName + " has been verified")
-                            validFiles += "<li>" + fileName + "</li>"
-                        else:
-                            self.log(Level.WARNING, logHeader + fileName + " is invalid")
-                            self.log(Level.INFO, logHeader + "verification file hash: " + verificationHash)
-                            invalidFiles += "<li>" + fileName + "</li>"
-                            invalidFiles += "<ul><li>Computed hash: " + fileHash + "</li><li>Hash in verification file: " + \
-                                            verificationHash + "</li></ul>"
-                else:
-                    self.log(Level.WARNING, logHeader + "Verification file does not exist")
-                    cannotValidateMessage += "<li>" + fileName + "</li>"
-                    cannotValidateList.append(fileName)
+        # for file in files:
+        #     imageFilePath = file.getLocalAbsPath()
+        #     if imageFilePath is not None:
+        #         fileName = os.path.basename(imageFilePath)
+        #         containingFolder = os.path.dirname(imageFilePath)
+        #         self.log(Level.INFO, logHeader + "Containing directory of file: " + containingFolder)
+        #         self.log(Level.INFO, logHeader + "Verifying " + fileName)
+        #
+        #         hashFile = fileName[:-4] + ".Hash.txt"
+        #         hashFilePath = containingFolder + "\\" + hashFile
+        #         self.log(Level.INFO, logHeader + "Filename containing verification hash: " + hashFile)
+        #         if os.path.exists(hashFilePath):
+        #             fileHash = ""
+        #             md5 = hashlib.md5()
+        #             with open(imageFilePath, "rb") as fileToValidate:
+        #                 fileChunk = fileToValidate.read(BLOCKSIZE)
+        #                 while len(fileChunk) > 0:
+        #                     md5.update(fileChunk)
+        #                     fileChunk = fileToValidate.read(BLOCKSIZE)
+        #                 fileHash = md5.hexdigest()
+        #             self.log(Level.INFO, logHeader + "File hash for " + fileName + ": " + fileHash)
+        #
+        #             with open(hashFilePath, "r") as verificationFile:
+        #                 verificationHash = verificationFile.readline().decode("ascii", "ignore")
+        #                 if verificationHash == fileHash:
+        #                     self.log(Level.INFO, logHeader + fileName + " has been verified")
+        #                     validFiles += "<li>" + fileName + "</li>"
+        #                 else:
+        #                     self.log(Level.WARNING, logHeader + fileName + " is invalid")
+        #                     self.log(Level.INFO, logHeader + "verification file hash: " + verificationHash)
+        #                     invalidFiles += "<li>" + fileName + "</li>"
+        #                     invalidFiles += "<ul><li>Computed hash: " + fileHash + "</li><li>Hash in verification file: " + \
+        #                                     verificationHash + "</li></ul>"
+        #                     invalidList.append(fileName)
+        #         else:
+        #             self.log(Level.WARNING, logHeader + "Verification file does not exist")
+        #             cannotValidateMessage += "<li>" + fileName + "</li>"
+        #             invalidList.append(fileName)
 
         validMessage += validFiles + "</ul><p>Invalid files</p><ul>" + invalidFiles + \
                         "</ul><p>Cannot validate due to missing validation file</p><ul>" + cannotValidateMessage + "</ul>"
@@ -558,37 +564,105 @@ class VolatilityIngestModule(DataSourceIngestModule):
         IngestServices.getInstance().postMessage(inbox)
 
         # Processing
-        try:
-            Class.forName("org.sqlite.JDBC").newInstance
-            VolatilityService = VolatilityServiceClass(self.VolatilityDir, self.Profile, caseDir + "\\VolatilityResults.db3")
-            progressBar.switchToDeterminate(3)
-            for file in files:
-                imageFilePath = file.getLocalAbsPath()
+        progressBar.switchToDeterminate(5)
+        VolatilityService = VolatilityServiceClass(self.VolatilityDir, self.Profile)
+        for file in files:
+            imageFilePath = file.getLocalAbsPath()
+            if imageFilePath is not None:
                 containingFolder = os.path.dirname(imageFilePath)
-                if imageFilePath is not None:
-                    fileName = os.path.basename(imageFilePath)
-                    if fileName not in invalidFiles:
-                        filePathToProcess = containingFolder + fileName
-                        progressBar.progress("Hivelist", 2)
-                        self.log(Level.INFO, logHeader + "File to process: " + filePathToProcess)
-                        result = VolatilityService.hivescan(filePathToProcess)
-                        self.log(Level.INFO, logHeader + "Hivelist result: " + result)
-                        connection = DriverManager.getConnection("jdbc:sqlite:" + caseDir + "\\VolatilityResults.db3")
+                fileName = os.path.basename(imageFilePath)
+                if fileName not in invalidFiles:
+                    dbName = caseDir + "\\VolatilityProcessor\\" + fileName[:-4] + ".db3"
+                    passwordFile = caseDir + "\\VolatilityProcessor\\" + fileName[:-4] + ".txt"
+                    if not os.path.isfile(dbName):
+                        self.log(Level.WARNING, logHeader + "Database file " + dbName + " does not exist")
+                    else:
+                        self.log(Level.INFO, logHeader + "The file does exist")
+                    VolatilityService.setDbName(dbName)
+                    self.log(Level.INFO, logHeader + "Database: " + dbName)
+                    filePathToProcess = containingFolder + "/" + fileName
+                    progressBar.progress("Hivelist", 1)
+                    self.log(Level.INFO, logHeader + "File to process: " + filePathToProcess)
+                    self.log(Level.INFO, logHeader + "Running hivescan...")
+                    # pipe = VolatilityService.hivescan(filePathToProcess)
+                    # result = pipe.communicate()
+                    # self.log(Level.INFO, logHeader + "Hivelist result: " + str(result))
+                    progressBar.progress("Scanning for processes", 2)
+                    self.log(Level.INFO, logHeader + "Running psscan...")
+                    pipe = VolatilityService.psScan(filePathToProcess)
+                    self.log(Level.INFO, logHeader + "Psscan result: " + str(pipe.communicate()))
+                    self.log(Level.INFO, logHeader + "Connecting to database...")
+                    self.log(Level.INFO, logHeader + System.getProperty("user.dir"))
+                    try:
+                        Class.forName("org.sqlite.JDBC").newInstance()
+                        connection = DriverManager.getConnection("jdbc:sqlite:/%s" % dbName)
+                    except SQLException as e:
+                        self.log(Level.INFO, "Could not open database file (not SQLite) " + dbName + " (" + e.getMessage() + ")")
+                        return IngestModule.ProcessResult.OK
+
+                    # systemVirtualAddress = None
+                    # samVirtualAddress = None
+                    #
+                    # try:
+                    #     statement1 = connection.createStatement()
+                    #     statement2 = connection.createStatement()
+                    #     resultSet1 = statement1.executeQuery("SELECT Virtual FROM HiveList WHERE Name LIKE '%SYSTEM'")
+                    #     resultSet2 = statement2.executeQuery("SELECT Virtual FROM HiveList WHERE Name LIKE '%SAM'")
+                    #     if resultSet1.next():
+                    #         systemVirtualAddress = resultSet1.getString("Virtual")
+                    #
+                    #     if resultSet2.next():
+                    #         samVirtualAddress = resultSet2.getString("Virtual")
+                    #
+                    #     resultSet1.close()
+                    #     resultSet2.close()
+                    #     statement1.close()
+                    #     statement2.close()
+                    # except SQLException as ex:
+                    #     self.log(Level.SEVERE, logHeader + "Cannot continue scan due to database errors: " + ex.getMessage())
+                    # progressBar.progress("Scanning for passwords", 2)
+                    # self.log(Level.INFO, logHeader + "Running hashdump...")
+                    # pipe = VolatilityService.getPasswords(filePathToProcess, systemVirtualAddress, samVirtualAddress, passwordFile)
+                    # result = pipe.communicate()
+                    # self.log(Level.INFO, logHeader + "Hashdump result: " + str(result))
+                    progressBar.progress("Making hive dump", 3)
+                    try:
                         statement = connection.createStatement()
-                        systemVirtualAddress = statement.executeQuery("SELECT Virtual FROM HiveList WHERE Name LIKE '%SYSTEM'")
-                        samVirtualAddress = statement.executeQuery("SELECT Virtual FROM HiveList WHERE Name LIKE '%SAM'")
+                        resultset = statement.executeQuery("SELECT Virtual FROM HiveList")
+                        virtualAddresses = []
+                        while resultset.next():
+                            virtualAddresses.append(resultset.getString("Virtual"))
 
-                        result = VolatilityService.getPasswords(filePathToProcess, systemVirtualAddress, samVirtualAddress)
-                        self.log(Level.INFO, logHeader + "Hashdump result: " + result)
-        except SQLException as ex:
-            self.log(Level.SERVERE, logHeader + "Cannot continue scan due to database errors: " + ex.message)
-            raise ex
-        finally:
-            if connection is not None:
-                connection.close()
+                        statement1 = connection.createStatement()
+                        keys = []
+                        resultset1 = statement.executeQuery("SELECT Key FROM HiveDump")
+                        while resultset1.next():
+                            keys.append(resultset1.getString("Key"))
 
-            if statement is not None:
-                statement.close()
+                        resultset.close()
+                        statement.close()
+                        resultset1.close()
+                        statement1.close()
+                        connection.close()
+
+                        self.log(Level.INFO, logHeader + "Running hivedump for registries")
+                        self.log(Level.INFO, logHeader + "Number of addresses to dump: " + str(len(virtualAddresses)))
+                        for address in virtualAddresses:
+                            pipe = VolatilityService.printkey(filePathToProcess, address)
+                            self.log(Level.INFO, logHeader + "Hivedump result: " + str(pipe.communicate()))
+
+                        self.log(Level.INFO, logHeader + "Number of keys to print: " + str(len(keys)))
+                        progressBar.progress("Printing keys", 4)
+                        self.log(Level.INFO, logHeader + "Running Printkey...")
+                        for key in keys:
+                            self.log(Level.INFO, logHeader + "Printing key: " + key)
+                            pipe = VolatilityService.printkey(filePathToProcess, key)
+                            self.log(Level.INFO, logHeader + "Printkey result: " + str(pipe.communicate()))
+                    except SQLException as ex:
+                        self.log(Level.SEVERE, logHeader + "Cannot continue scan due to database errors: " + ex.getMessage())
+
+                if connection is not None:
+                    connection.close()
 
         return IngestModule.ProcessResult.OK
 
