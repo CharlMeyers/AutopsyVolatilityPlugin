@@ -11,7 +11,7 @@ class VolatilityServiceClass:
     def setDbName(self, dbName):
         self.database = dbName
 
-    def hivescan(self, file):
+    def hivelist(self, file):
         pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile,
                       "hivelist", "--output=sqlite", "--output-file=" + self.database], stdout=PIPE, stderr=PIPE)
         return pipe
@@ -21,7 +21,7 @@ class VolatilityServiceClass:
                       "--output=text", "--output-file=" + fileName], stdout=PIPE, stderr=PIPE)
         return pipe
 
-    def hiveDump(self, file, address):
+    def hivedump(self, file, address):
         pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "hivedump", "-o", address,
                       "--output=sqlite", "--output-file=" + self.database], stdout=PIPE, stderr=PIPE)
         return pipe
@@ -31,22 +31,22 @@ class VolatilityServiceClass:
                       "--output=sqlite", "--output-file=" + self.database], stdout=PIPE, stderr=PIPE)
         return pipe
 
-    def psScan(self, file):
+    def psscan(self, file):
         pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "psscan", "--output=sqlite",
                       "--output-file=" + self.database], stdout=PIPE, stderr=PIPE)
         return pipe
 
-    def fileScan(self, file):
+    def filescan(self, file):
         pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "filescan", "--output=sqlite",
                       "--output-file=" + self.database], stdout=PIPE, stderr=PIPE)
         return pipe
 
-    def netScan(self, file):
+    def netscan(self, file):
         pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "netscan", "--output=sqlite",
                       "--output-file=" + self.database], stdout=PIPE, stderr=PIPE)
         return pipe
 
-    def lsaDump(self, file, outputFile):
+    def lsadump(self, file, outputFile):
         pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "lsadump",
                       "--output=text", "--output-file=" + outputFile], stdout=PIPE, stderr=PIPE)
         return pipe
@@ -56,12 +56,12 @@ class VolatilityServiceClass:
                      stdout=PIPE, stderr=PIPE)
         return pipe
 
-    def dumpRegistry(self, file, outputDir):
+    def dumpregistry(self, file, outputDir):
         pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "dumpregistry", "-D", outputDir],
                      stdout=PIPE, stderr=PIPE)
         return pipe
 
-    def procDump(self, file, processId, outputDir):
+    def procdump(self, file, processId, outputDir):
         pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "procdump", "-D", outputDir,
                       "-p", processId], stdout=PIPE, stderr=PIPE)
         return pipe

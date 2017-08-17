@@ -443,7 +443,7 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
 
 
 class VolatilityIngestModule(DataSourceIngestModule):
-    processCount = 5
+    processCount = 12
     def __init__(self, settings):
         self.context = None
         self.localSettings = settings
@@ -488,7 +488,7 @@ class VolatilityIngestModule(DataSourceIngestModule):
                                             "Volatility Process Started")
         IngestServices.getInstance().postMessage(inbox)
 
-        case = Case.getCurrentCase().getSleuthkitCase()
+        # case = Case.getCurrentCase().getSleuthkitCase()
         fileManager = Case.getCurrentCase().getServices().getFileManager()
         files = fileManager.findFiles(dataSource, "%", "/")
         caseDir = Case.getCurrentCase().getModulesOutputDirAbsPath()
@@ -570,122 +570,146 @@ class VolatilityIngestModule(DataSourceIngestModule):
                 fileName = os.path.basename(imageFilePath)
                 if fileName not in invalidFiles:
                     dbName = caseDir + "\\VolatilityProcessor\\" + fileName[:-4] + ".db3"
-                    passwordFile = caseDir + "\\VolatilityProcessor\\" + fileName[:-4] + ".txt"
+                    passwordFile = caseDir + "\\VolatilityProcessor\\" + fileName[:-4] + "-PASSWORD.txt"
+                    lsadumpFile = caseDir + "\\VolatilityProcessor\\" + fileName[:-4] + "-LSADump.txt"
+
                     if not os.path.isfile(dbName):
                         self.log(Level.WARNING, logHeader + "Database file " + dbName + " does not exist")
                     else:
                         self.log(Level.INFO, logHeader + "The file does exist")
+
                     VolatilityService.setDbName(dbName)
+
                     self.log(Level.INFO, logHeader + "Database: " + dbName)
                     filePathToProcess = containingFolder + "/" + fileName
-                    progressBar.progress("Hivelist", self.progressCount(currentProcess, currentFile))
-                    currentProcess += 1
 
+                    # Hivelist
+                    progressBar.progress("Running hivelist", self.progressCount(currentProcess, currentFile))
+                    currentProcess += 1
                     self.log(Level.INFO, logHeader + "File to process: " + filePathToProcess)
-                    self.log(Level.INFO, logHeader + "Running hivescan...")
-                    # pipe = VolatilityService.hivescan(filePathToProcess)
-                    # result = pipe.communicate()
-                    # self.log(Level.INFO, logHeader + "Hivelist result: " + str(result))
-                    progressBar.progress("Scanning for processes", self.progressCount(currentProcess, currentFile))
+                    self.log(Level.INFO, logHeader + "Running hivelist...")
+                    pipe = VolatilityService.hivelist(filePathToProcess)
+                    result = pipe.communicate()
+                    self.log(Level.INFO, logHeader + "Hivelist result: " + str(result))
+
+                    # Psscan
+                    progressBar.progress("Running psscan", self.progressCount(currentProcess, currentFile))
                     currentProcess += 1
+                    self.log(Level.INFO, logHeader + "Running psscan...")
+                    pipe = VolatilityService.psScan(filePathToProcess)
+                    self.log(Level.INFO, logHeader + "Psscan result: " + str(pipe.communicate()))
 
-                    # self.log(Level.INFO, logHeader + "Running psscan...")
-                    # pipe = VolatilityService.psScan(filePathToProcess)
-                    # self.log(Level.INFO, logHeader + "Psscan result: " + str(pipe.communicate()))
-
-                    # try:
-                    #     Class.forName("org.sqlite.JDBC").newInstance()
-                    #     connection = DriverManager.getConnection("jdbc:sqlite:/%s" % dbName)
-                    # except SQLException as e:
-                    #     self.log(Level.INFO, "Could not open database file (not SQLite) " + dbName + " (" + e.getMessage() + ")")
-                    #     return IngestModule.ProcessResult.OK
-
-                    # systemVirtualAddress = None
-                    # samVirtualAddress = None
-                    #
-                    # try:
-                    #     statement1 = connection.createStatement()
-                    #     statement2 = connection.createStatement()
-                    #     resultSet1 = statement1.executeQuery("SELECT Virtual FROM HiveList WHERE Name LIKE '%SYSTEM'")
-                    #     resultSet2 = statement2.executeQuery("SELECT Virtual FROM HiveList WHERE Name LIKE '%SAM'")
-                    #     if resultSet1.next():
-                    #         systemVirtualAddress = resultSet1.getString("Virtual")
-                    #
-                    #     if resultSet2.next():
-                    #         samVirtualAddress = resultSet2.getString("Virtual")
-                    #
-                    #     resultSet1.close()
-                    #     resultSet2.close()
-                    #     statement1.close()
-                    #     statement2.close()
-                    # except SQLException as ex:
-                    #     self.log(Level.SEVERE, logHeader + "Cannot continue scan due to database errors: " + ex.getMessage())
-                    # progressBar.progress("Scanning for passwords", self.progressCount(currentProcess, currentFile))
-                    # currentProcess += 1
-                    # self.log(Level.INFO, logHeader + "Running hashdump...")
-                    # pipe = VolatilityService.getPasswords(filePathToProcess, systemVirtualAddress, samVirtualAddress, passwordFile)
-                    # result = pipe.communicate()
-                    # self.log(Level.INFO, logHeader + "Hashdump result: " + str(result))
+                    # Hashdump
                     try:
-                        # statement = connection.createStatement()
-                        # resultset = statement.executeQuery("SELECT Virtual FROM HiveList")
-                        # virtualAddresses = []
-                        # while resultset.next():
-                        #     virtualAddresses.append(resultset.getString("Virtual"))
-                        #
-                        # resultset.close()
-                        # statement.close()
-                        # connection.close()
+                        Class.forName("org.sqlite.JDBC").newInstance()
+                        connection = DriverManager.getConnection("jdbc:sqlite:/%s" % dbName)
+                    except SQLException as e:
+                        self.log(Level.INFO, "Could not open database file (not SQLite) " + dbName + " (" + e.getMessage() + ")")
+                        return IngestModule.ProcessResult.ERROR
 
-                        progressBar.progress("Making hive dump", self.progressCount(currentProcess, currentFile))
-                        currentProcess += 1
+                    systemVirtualAddress = None
+                    samVirtualAddress = None
 
-                        # self.log(Level.INFO, logHeader + "Running hivedump for registries")
-                        # self.log(Level.INFO, logHeader + "Number of addresses to dump: " + str(len(virtualAddresses)))
-                        # addressNum = 1
-                        # for address in virtualAddresses:
-                        #     self.log(Level.INFO, logHeader + "Running address number: " + str(addressNum))
-                        #     pipe = VolatilityService.printkey(filePathToProcess, address)
-                        #     self.log(Level.INFO, logHeader + "Hivedump result: " + str(pipe.communicate()))
-                        #     addressNum += 1
+                    try:
+                        statement1 = connection.createStatement()
+                        statement2 = connection.createStatement()
+                        resultSet1 = statement1.executeQuery("SELECT Virtual FROM HiveList WHERE Name LIKE '%SYSTEM'")
+                        resultSet2 = statement2.executeQuery("SELECT Virtual FROM HiveList WHERE Name LIKE '%SAM'")
+                        if resultSet1.next():
+                            systemVirtualAddress = resultSet1.getString("Virtual")
+
+                        if resultSet2.next():
+                            samVirtualAddress = resultSet2.getString("Virtual")
+
+                        resultSet1.close()
+                        resultSet2.close()
+                        statement1.close()
+                        statement2.close()
                     except SQLException as ex:
                         self.log(Level.SEVERE, logHeader + "Cannot continue scan due to database errors: " + ex.getMessage())
+                        return IngestModule.ProcessResult.ERROR
+                    progressBar.progress("Running hashdump", self.progressCount(currentProcess, currentFile))
+                    currentProcess += 1
+                    self.log(Level.INFO, logHeader + "Running hashdump...")
+                    pipe = VolatilityService.getPasswords(filePathToProcess, systemVirtualAddress, samVirtualAddress, passwordFile)
+                    result = pipe.communicate()
+                    self.log(Level.INFO, logHeader + "Hashdump result: " + str(result))
 
+                    # Hivedump
                     try:
-                        # self.log(Level.INFO, logHeader + "Connecting to db")
-                        # Class.forName("org.sqlite.JDBC").newInstance()
-                        # connection = DriverManager.getConnection("jdbc:sqlite:/%s" % dbName)
-                        # self.log(Level.INFO, logHeader + "Running statement")
-                        # statement1 = connection.createStatement()
-                        # resultset1 = statement.executeQuery("SELECT Key FROM HiveDump")
-                        # keys = []
-                        # while resultset1.next():
-                        #     keys.append(resultset1.getString("Key"))
-                        #
-                        # resultset1.close()
-                        # statement1.close()
-                        # connection.close()
+                        statement = connection.createStatement()
+                        resultset = statement.executeQuery("SELECT Virtual FROM HiveList")
+                        virtualAddresses = []
+                        while resultset.next():
+                            virtualAddresses.append(resultset.getString("Virtual"))
 
-                        # self.log(Level.INFO, logHeader + "Number of keys to print: " + str(len(keys)))
-                        progressBar.progress("Printing keys", self.progressCount(currentProcess, currentFile))
+                        resultset.close()
+                        statement.close()
+                        connection.close()
+
+                        progressBar.progress("Running hivedump", self.progressCount(currentProcess, currentFile))
+                        currentProcess += 1
+
+                        self.log(Level.INFO, logHeader + "Running hivedump for registries")
+                        self.log(Level.INFO, logHeader + "Number of addresses to dump: " + str(len(virtualAddresses)))
+                        addressNum = 1
+                        for address in virtualAddresses:
+                            self.log(Level.INFO, logHeader + "Running address number: " + str(addressNum))
+                            pipe = VolatilityService.hivedump(filePathToProcess, address)
+                            self.log(Level.INFO, logHeader + "Hivedump result: " + str(pipe.communicate()))
+                            addressNum += 1
+                    except SQLException as ex:
+                        self.log(Level.SEVERE, logHeader + "Cannot continue scan due to database errors: " + ex.getMessage())
+                        return IngestModule.ProcessResult.ERROR
+
+                    # Printkey
+                    try:
+                        self.log(Level.INFO, logHeader + "Connecting to db")
+                        Class.forName("org.sqlite.JDBC").newInstance()
+                        connection = DriverManager.getConnection("jdbc:sqlite:/%s" % dbName)
+
+                        statement1 = connection.createStatement()
+                        resultset1 = statement.executeQuery("SELECT Key FROM HiveDump")
+                        keys = []
+                        while resultset1.next():
+                            keys.append(resultset1.getString("Key"))
+
+                        resultset1.close()
+                        statement1.close()
+                        connection.close()
+
+                        self.log(Level.INFO, logHeader + "Number of keys to print: " + str(len(keys)))
+                        progressBar.progress("Running printkey", self.progressCount(currentProcess, currentFile))
                         currentProcess += 1
 
                         self.log(Level.INFO, logHeader + "Running Printkey...")
-                        # for key in keys:
-                        #     self.log(Level.INFO, logHeader + "Printing key: " + key)
-                        #     pipe = VolatilityService.printkey(filePathToProcess, key)
-                        #     self.log(Level.INFO, logHeader + "Printkey result: " + str(pipe.communicate()))
+                        for key in keys:
+                            self.log(Level.INFO, logHeader + "Printing key: " + key)
+                            pipe = VolatilityService.printkey(filePathToProcess, key)
+                            self.log(Level.INFO, logHeader + "Printkey result: " + str(pipe.communicate()))
                     except SQLException as ex:
                         self.log(Level.SEVERE, logHeader + "Cannot continue scan due to database errors: " + ex.getMessage())
+                        return IngestModule.ProcessResult.ERROR
 
+                    # Netscan
                     progressBar.progress("Running netscan", self.progressCount(currentProcess, currentFile))
                     currentProcess += 1
                     self.log(Level.INFO, logHeader + "Running netscan...")
-                    pipe = VolatilityService.netScan(filePathToProcess)
+                    pipe = VolatilityService.netscan(filePathToProcess)
                     self.log(Level.INFO, logHeader + "Netscan results: " + str(pipe.communicate()))
 
-                # if connection is not None:
-                #     connection.close()
+                    # Lsadump
+                    progressBar.progress("Running lsadump", self.progressCount(currentProcess, currentFile))
+                    currentProcess += 1
+                    self.log(Level.INFO, logHeader + "Running lsadump...")
+                    pipe = VolatilityService.lsadump(filePathToProcess, lsadumpFile)
+                    self.log(Level.INFO, logHeader + "Lsadump results: " + str(pipe.communicate()))
+
+                if connection is not None:
+                    try:
+                        connection.close()
+                    except SQLException as e:
+                        self.log(Level.WARNING, logHeader + "Could not close database: " + e.getMessage())
 
                 currentFile += 1
 
