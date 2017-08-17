@@ -36,4 +36,35 @@ class VolatilityServiceClass:
                       "--output-file=" + self.database], stdout=PIPE, stderr=PIPE)
         return pipe
 
+    def fileScan(self, file):
+        pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "filescan", "--output=sqlite",
+                      "--output-file=" + self.database], stdout=PIPE, stderr=PIPE)
+        return pipe
+
+    def netScan(self, file):
+        pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "netscan", "--output=sqlite",
+                      "--output-file=" + self.database], stdout=PIPE, stderr=PIPE)
+        return pipe
+
+    def lsaDump(self, file, outputFile):
+        pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "lsadump",
+                      "--output=text", "--output-file=" + outputFile], stdout=PIPE, stderr=PIPE)
+        return pipe
+
+    def dlldump(self, file, outputDir):
+        pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "dlldump", "-D", outputDir],
+                     stdout=PIPE, stderr=PIPE)
+        return pipe
+
+    def dumpRegistry(self, file, outputDir):
+        pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "dumpregistry", "-D", outputDir],
+                     stdout=PIPE, stderr=PIPE)
+        return pipe
+
+    def procDump(self, file, processId, outputDir):
+        pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "procdump", "-D", outputDir,
+                      "-p", processId], stdout=PIPE, stderr=PIPE)
+        return pipe
+
+    # def dumpfiles(self, file, ):
 
