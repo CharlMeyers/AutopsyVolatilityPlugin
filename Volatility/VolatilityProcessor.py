@@ -30,6 +30,9 @@ from org.sleuthkit.autopsy.ingest import IngestServices
 from org.sleuthkit.autopsy.ingest import IngestModule
 from org.sleuthkit.autopsy.ingest.IngestModule import IngestModuleException
 from org.sleuthkit.autopsy.casemodule import Case
+from org.sleuthkit.datamodel import BlackboardArtifact
+from org.sleuthkit.datamodel import BlackboardAttribute
+from org.sleuthkit.autopsy.ingest import ModuleDataEvent
 
 class VolatilityIngestModuleFactory(IngestModuleFactoryAdapter):
     def __init__(self):
@@ -443,7 +446,6 @@ class VolatilityIngestModuleUISettingsPanel(IngestModuleIngestJobSettingsPanel):
 
 
 class VolatilityIngestModule(DataSourceIngestModule):
-    processCount = 12
     def __init__(self, settings):
         self.context = None
         self.localSettings = settings
@@ -488,7 +490,7 @@ class VolatilityIngestModule(DataSourceIngestModule):
                                             "Volatility Process Started")
         IngestServices.getInstance().postMessage(inbox)
 
-        # case = Case.getCurrentCase().getSleuthkitCase()
+        case = Case.getCurrentCase().getSleuthkitCase()
         fileManager = Case.getCurrentCase().getServices().getFileManager()
         files = fileManager.findFiles(dataSource, "%", "/")
         caseDir = Case.getCurrentCase().getModulesOutputDirAbsPath()
@@ -499,6 +501,7 @@ class VolatilityIngestModule(DataSourceIngestModule):
         dllDumpDir = caseDir + "\VolatilityProcessor\\Dump_Files\\DLLDump"
         dumpRegistryDir = caseDir + "\VolatilityProcessor\\Dump_Files\\RegistryDump"
         procDumpDir = caseDir + "\VolatilityProcessor\\Dump_Files\\ProcDump"
+        hiveDumpDir = caseDir + "\VolatilityProcessor\\HiveDump"
 
         try:
             os.mkdir(caseDir + "\VolatilityProcessor")
@@ -506,6 +509,7 @@ class VolatilityIngestModule(DataSourceIngestModule):
             os.mkdir(dllDumpDir)
             os.mkdir(dumpRegistryDir)
             os.mkdir(procDumpDir)
+            os.mkdir(hiveDumpDir)
         except OSError as e:
             self.log(Level.WARNING, logHeader + "Trying to create directory that already exists: " + e.message)
 
@@ -521,45 +525,45 @@ class VolatilityIngestModule(DataSourceIngestModule):
         invalidFiles = ""
         invalidList = []
         cannotValidateMessage = ""
-        for file in files:
-            imageFilePath = file.getLocalAbsPath()
-            if imageFilePath is not None:
-                fileName = os.path.basename(imageFilePath)
-                containingFolder = os.path.dirname(imageFilePath)
-                self.log(Level.INFO, logHeader + "Containing directory of file: " + containingFolder)
-                self.log(Level.INFO, logHeader + "Verifying " + fileName)
-
-                hashFile = fileName[:-4] + ".Hash.txt"
-                hashFilePath = containingFolder + "\\" + hashFile
-                self.log(Level.INFO, logHeader + "Filename containing verification hash: " + hashFile)
-                if os.path.exists(hashFilePath):
-                    fileHash = ""
-                    md5 = hashlib.md5()
-                    with open(imageFilePath, "rb") as fileToValidate:
-                        fileChunk = fileToValidate.read(BLOCKSIZE)
-                        while len(fileChunk) > 0:
-                            md5.update(fileChunk)
-                            fileChunk = fileToValidate.read(BLOCKSIZE)
-                        fileHash = md5.hexdigest()
-                    self.log(Level.INFO, logHeader + "File hash for " + fileName + ": " + fileHash)
-
-                    with open(hashFilePath, "r") as verificationFile:
-                        verificationHash = verificationFile.readline().decode("ascii", "ignore")
-                        if verificationHash == fileHash:
-                            self.log(Level.INFO, logHeader + fileName + " has been verified")
-                            validFiles += "<li>" + fileName + "</li>"
-                            numFiles += 1
-                        else:
-                            self.log(Level.WARNING, logHeader + fileName + " is invalid")
-                            self.log(Level.INFO, logHeader + "verification file hash: " + verificationHash)
-                            invalidFiles += "<li>" + fileName + "</li>"
-                            invalidFiles += "<ul><li>Computed hash: " + fileHash + "</li><li>Hash in verification file: " + \
-                                            verificationHash + "</li></ul>"
-                            invalidList.append(fileName)
-                else:
-                    self.log(Level.WARNING, logHeader + "Verification file does not exist")
-                    cannotValidateMessage += "<li>" + fileName + "</li>"
-                    invalidList.append(fileName)
+        # for file in files:
+        #     imageFilePath = file.getLocalAbsPath()
+        #     if imageFilePath is not None:
+        #         fileName = os.path.basename(imageFilePath)
+        #         containingFolder = os.path.dirname(imageFilePath)
+        #         self.log(Level.INFO, logHeader + "Containing directory of file: " + containingFolder)
+        #         self.log(Level.INFO, logHeader + "Verifying " + fileName)
+        #
+        #         hashFile = fileName[:-4] + ".Hash.txt"
+        #         hashFilePath = containingFolder + "\\" + hashFile
+        #         self.log(Level.INFO, logHeader + "Filename containing verification hash: " + hashFile)
+        #         if os.path.exists(hashFilePath):
+        #             fileHash = ""
+        #             md5 = hashlib.md5()
+        #             with open(imageFilePath, "rb") as fileToValidate:
+        #                 fileChunk = fileToValidate.read(BLOCKSIZE)
+        #                 while len(fileChunk) > 0:
+        #                     md5.update(fileChunk)
+        #                     fileChunk = fileToValidate.read(BLOCKSIZE)
+        #                 fileHash = md5.hexdigest()
+        #             self.log(Level.INFO, logHeader + "File hash for " + fileName + ": " + fileHash)
+        #
+        #             with open(hashFilePath, "r") as verificationFile:
+        #                 verificationHash = verificationFile.readline().decode("ascii", "ignore")
+        #                 if verificationHash == fileHash:
+        #                     self.log(Level.INFO, logHeader + fileName + " has been verified")
+        #                     validFiles += "<li>" + fileName + "</li>"
+        #                     numFiles += 1
+        #                 else:
+        #                     self.log(Level.WARNING, logHeader + fileName + " is invalid")
+        #                     self.log(Level.INFO, logHeader + "verification file hash: " + verificationHash)
+        #                     invalidFiles += "<li>" + fileName + "</li>"
+        #                     invalidFiles += "<ul><li>Computed hash: " + fileHash + "</li><li>Hash in verification file: " + \
+        #                                     verificationHash + "</li></ul>"
+        #                     invalidList.append(fileName)
+        #         else:
+        #             self.log(Level.WARNING, logHeader + "Verification file does not exist")
+        #             cannotValidateMessage += "<li>" + fileName + "</li>"
+        #             invalidList.append(fileName)
 
         validMessage += validFiles + "</ul><p>Invalid files</p><ul>" + invalidFiles + \
                         "</ul><p>Cannot validate due to missing validation file</p><ul>" + cannotValidateMessage + "</ul>"
@@ -569,6 +573,7 @@ class VolatilityIngestModule(DataSourceIngestModule):
 
         # Processing
         # numFiles = 1 # TODO: remove this line
+        self.processCount = 10
         progressBar.switchToDeterminate(self.progressCount(self.processCount, numFiles))
         VolatilityService = VolatilityServiceClass(self.VolatilityDir, self.Profile)
         currentFile = 1
@@ -581,205 +586,352 @@ class VolatilityIngestModule(DataSourceIngestModule):
                 if fileName not in invalidFiles:
                     dbName = caseDir + "\\VolatilityProcessor\\" + fileName[:-4] + ".db3"
                     passwordFile = caseDir + "\\VolatilityProcessor\\" + fileName[:-4] + "-PASSWORD.txt"
-                    lsadumpFile = caseDir + "\\VolatilityProcessor\\" + fileName[:-4] + "-LSADump.txt"
 
                     if not os.path.isfile(dbName):
                         self.log(Level.WARNING, logHeader + "Database file " + dbName + " does not exist")
-                    else:
-                        self.log(Level.INFO, logHeader + "The file does exist")
 
                     VolatilityService.setDbName(dbName)
 
+                    # inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
+                    #                                     "Analysing memory for " + fileName)
+                    # IngestServices.getInstance().postMessage(inbox)
+                    #
+                    # self.log(Level.INFO, logHeader + "Database: " + dbName)
+                    # filePathToProcess = containingFolder + "/" + fileName
+                    #
+                    # # Hivelist
+                    # progressBar.progress("Running hivelist", self.progressCount(currentProcess, currentFile))
+                    # currentProcess += 1
+                    # self.log(Level.INFO, logHeader + "File to process: " + filePathToProcess)
+                    # self.log(Level.INFO, logHeader + "Running hivelist...")
+                    # pipe = VolatilityService.hivelist(filePathToProcess)
+                    # result = pipe.communicate()
+                    # self.log(Level.INFO, logHeader + "Hivelist result: " + str(result))
+                    #
+                    # # Psscan
+                    # progressBar.progress("Running psscan", self.progressCount(currentProcess, currentFile))
+                    # currentProcess += 1
+                    # self.log(Level.INFO, logHeader + "Running psscan...")
+                    # pipe = VolatilityService.psscan(filePathToProcess)
+                    # self.log(Level.INFO, logHeader + "Psscan result: " + str(pipe.communicate()))
+                    #
+                    # # Pslist
+                    # progressBar.progress("Running pslist", self.progressCount(currentProcess, currentFile))
+                    # currentProcess += 1
+                    # self.log(Level.INFO, logHeader + "Running pslist...")
+                    # pipe = VolatilityService.pslist(filePathToProcess)
+                    # self.log(Level.INFO, logHeader + "Pslist result: " + str(pipe.communicate()))
+                    #
+                    # # Filescan
+                    # progressBar.progress("Running filescan", self.progressCount(currentProcess, currentFile))
+                    # currentProcess += 1
+                    # self.log(Level.INFO, logHeader + "Running filescan...")
+                    # pipe = VolatilityService.filescan(filePathToProcess)
+                    # self.log(Level.INFO, logHeader + "Filescan results: " + str(pipe.communicate()))
+
+                    # # Netscan
+                    # progressBar.progress("Running netscan", self.progressCount(currentProcess, currentFile))
+                    # currentProcess += 1
+                    # self.log(Level.INFO, logHeader + "Running netscan...")
+                    # pipe = VolatilityService.netscan(filePathToProcess)
+                    # self.log(Level.INFO, logHeader + "Netscan results: " + str(pipe.communicate()))
+                    #
+                    # # Hashdump
+                    # try:
+                    #     Class.forName("org.sqlite.JDBC").newInstance()
+                    #     connection = DriverManager.getConnection("jdbc:sqlite:/%s" % dbName)
+                    # except SQLException as e:
+                    #     self.log(Level.INFO, "Could not open database file (not SQLite) " + dbName + " (" + e.getMessage() + ")")
+                    #     return IngestModule.ProcessResult.ERROR
+                    #
+                    # systemVirtualAddress = None
+                    # samVirtualAddress = None
+                    #
+                    # try:
+                    #     statement1 = connection.createStatement()
+                    #     statement2 = connection.createStatement()
+                    #     resultSet1 = statement1.executeQuery("SELECT Virtual FROM HiveList WHERE Name LIKE '%SYSTEM'")
+                    #     resultSet2 = statement2.executeQuery("SELECT Virtual FROM HiveList WHERE Name LIKE '%SAM'")
+                    #     if resultSet1.next():
+                    #         systemVirtualAddress = resultSet1.getString("Virtual")
+                    #
+                    #     if resultSet2.next():
+                    #         samVirtualAddress = resultSet2.getString("Virtual")
+                    #
+                    #     resultSet1.close()
+                    #     resultSet2.close()
+                    #     statement1.close()
+                    #     statement2.close()
+                    # except SQLException as ex:
+                    #     self.log(Level.SEVERE, logHeader + "Cannot continue scan due to database errors: " + ex.getMessage())
+                    #     # return IngestModule.ProcessResult.ERROR
+                    # progressBar.progress("Running hashdump", self.progressCount(currentProcess, currentFile))
+                    # currentProcess += 1
+                    # self.log(Level.INFO, logHeader + "Running hashdump...")
+                    # pipe = VolatilityService.getPasswords(filePathToProcess, systemVirtualAddress, samVirtualAddress, passwordFile)
+                    # result = pipe.communicate()
+                    # self.log(Level.INFO, logHeader + "Hashdump result: " + str(result))
+                    #
+                    # # Hivedump
+                    # try:
+                    #     statement = connection.createStatement()
+                    #     resultset = statement.executeQuery("SELECT Virtual FROM HiveList")
+                    #     virtualAddresses = []
+                    #     while resultset.next():
+                    #         virtualAddresses.append(resultset.getString("Virtual"))
+                    #
+                    #     resultset.close()
+                    #     statement.close()
+                    #     connection.close()
+                    #
+                    #     progressBar.progress("Running hivedump", self.progressCount(currentProcess, currentFile))
+                    #     currentProcess += 1
+                    #
+                    #     self.log(Level.INFO, logHeader + "Running hivedump for registries")
+                    #     self.log(Level.INFO, logHeader + "Number of addresses to dump: " + str(len(virtualAddresses)))
+                    #     addressNum = 1
+                    #     for address in virtualAddresses:
+                    #         self.log(Level.INFO, logHeader + "Running address number: " + str(addressNum))
+                    #         pipe = VolatilityService.hivedump(filePathToProcess, address, hiveDumpDir + "\\" + str(address) + ".json")
+                    #         self.log(Level.INFO, logHeader + "Hivedump result: " + str(pipe.communicate()))
+                    #         addressNum += 1
+                    # except SQLException as ex:
+                    #     self.log(Level.SEVERE, logHeader + "Cannot continue scan due to database errors: " + ex.getMessage())
+                    #     # return IngestModule.ProcessResult.ERROR
+                    #
+                    # # Dlldump
+                    # progressBar.progress("Running dlldump", self.progressCount(currentProcess, currentFile))
+                    # currentProcess += 1
+                    # self.log(Level.INFO, logHeader + "Running dlldump...")
+                    # pipe = VolatilityService.dlldump(filePathToProcess, dllDumpDir)
+                    # self.log(Level.INFO, logHeader + "Dlldump results: " + str(pipe.communicate()))
+                    #
+                    # # Dumpregistry
+                    # progressBar.progress("Running dumpregistry", self.progressCount(currentProcess, currentFile))
+                    # currentProcess += 1
+                    # self.log(Level.INFO, logHeader + "Running dumpregistry...")
+                    # pipe = VolatilityService.dumpregistry(filePathToProcess, dumpRegistryDir)
+                    # self.log(Level.INFO, logHeader + "Dumpregistry results: " + str(pipe.communicate()))
+                    #
+                    # # Procdump
+                    # try:
+                    #     progressBar.progress("Running procdump", self.progressCount(currentProcess, currentFile))
+                    #     currentProcess += 1
+                    #
+                    #     Class.forName("org.sqlite.JDBC").newInstance()
+                    #     connection = DriverManager.getConnection("jdbc:sqlite:/%s" % dbName)
+                    #
+                    #     statement = connection.createStatement()
+                    #     resultset1 = statement.executeQuery("SELECT DISTINCT PID FROM PSList")
+                    #     pids = []
+                    #     while resultset1.next():
+                    #         pids.append(resultset1.getString("PID"))
+                    #
+                    #     resultset1.close()
+                    #     statement.close()
+                    #     connection.close()
+                    #
+                    #     self.log(Level.INFO, logHeader + "Number of unique processes to dump: " + str(len(pids)))
+                    #     pipe = VolatilityService.procdump(filePathToProcess, pids, procDumpDir)
+                    #     self.log(Level.INFO, logHeader + "Procdump result: " + str(pipe.communicate()))
+                    # except SQLException as ex:
+                    #         self.log(Level.SEVERE, logHeader + "Cannot continue scan due to database errors: " + ex.getMessage())
+                    #         # return IngestModule.ProcessResult.ERROR
+
+                    # Analyse
                     inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
-                                                        "Analysing memory for " + fileName)
+                                                        "Analysing results for " + fileName)
                     IngestServices.getInstance().postMessage(inbox)
 
-                    self.log(Level.INFO, logHeader + "Database: " + dbName)
-                    filePathToProcess = containingFolder + "/" + fileName
-
-                    # Hivelist
-                    progressBar.progress("Running hivelist", self.progressCount(currentProcess, currentFile))
+                    progressBar.progress("Analysing results", self.progressCount(currentProcess, currentFile))
                     currentProcess += 1
-                    self.log(Level.INFO, logHeader + "File to process: " + filePathToProcess)
-                    self.log(Level.INFO, logHeader + "Running hivelist...")
-                    pipe = VolatilityService.hivelist(filePathToProcess)
-                    result = pipe.communicate()
-                    self.log(Level.INFO, logHeader + "Hivelist result: " + str(result))
 
-                    # Psscan
-                    progressBar.progress("Running psscan", self.progressCount(currentProcess, currentFile))
-                    currentProcess += 1
-                    self.log(Level.INFO, logHeader + "Running psscan...")
-                    pipe = VolatilityService.psScan(filePathToProcess)
-                    self.log(Level.INFO, logHeader + "Psscan result: " + str(pipe.communicate()))
-
-                    # Filescan
-                    progressBar.progress("Running filescan", self.progressCount(currentProcess, currentFile))
-                    currentProcess += 1
-                    self.log(Level.INFO, logHeader + "Running filescan...")
-                    pipe = VolatilityService.filescan(filePathToProcess)
-                    self.log(Level.INFO, logHeader + "Filescan results: " + str(pipe.communicate()))
-
-                    # Hashdump
                     try:
                         Class.forName("org.sqlite.JDBC").newInstance()
                         connection = DriverManager.getConnection("jdbc:sqlite:/%s" % dbName)
-                    except SQLException as e:
-                        self.log(Level.INFO, "Could not open database file (not SQLite) " + dbName + " (" + e.getMessage() + ")")
-                        return IngestModule.ProcessResult.ERROR
 
-                    systemVirtualAddress = None
-                    samVirtualAddress = None
+                        processArtifactName = ""
+                        registryArtifactName = ""
+                        accountArtifactName = ""
+                        fileArtifactName = ""
 
-                    try:
-                        statement1 = connection.createStatement()
-                        statement2 = connection.createStatement()
-                        resultSet1 = statement1.executeQuery("SELECT Virtual FROM HiveList WHERE Name LIKE '%SYSTEM'")
-                        resultSet2 = statement2.executeQuery("SELECT Virtual FROM HiveList WHERE Name LIKE '%SAM'")
-                        if resultSet1.next():
-                            systemVirtualAddress = resultSet1.getString("Virtual")
+                        try:
+                            processArtifactName = "VolatilityProcessor_Processes_" + fileName
+                            registryArtifactName = "VolatilityProcessor_Registries_" + fileName
+                            accountArtifactName = "VolatilityProcessor_Accounts_" + fileName
+                            fileArtifactName = "VolatilityProcessor_Files_" + fileName
 
-                        if resultSet2.next():
-                            samVirtualAddress = resultSet2.getString("Virtual")
+                            case.addArtifactType(processArtifactName, processArtifactName)
+                            case.addArtifactType(registryArtifactName, registryArtifactName)
+                            case.addArtifactType(accountArtifactName, accountArtifactName)
+                            case.addArtifactType(fileArtifactName, fileArtifactName)
+                        except:
+                            self.log(Level.WARNING, logHeader + "Error creating artifacts, some artifacts might not exist")
 
-                        resultSet1.close()
-                        resultSet2.close()
-                        statement1.close()
-                        statement2.close()
+                        processArtifact = case.getArtifactTypeID(processArtifactName)
+                        processArtifactType = case.getArtifactType(processArtifactName)
+                        registryArtifact = case.getArtifactTypeID(registryArtifactName)
+                        registryArtifactType = case.getArtifactType(registryArtifactName)
+                        accountArtifact = case.getArtifactTypeID(accountArtifactName)
+                        accountArtifactType = case.getArtifactType(accountArtifactName)
+                        fileArtifact = case.getArtifactTypeID(fileArtifactName)
+                        fileArtifactType = case.getArtifactType(fileArtifactName)
+
+                        # Account
+                        # try:
+                        #     case.addArtifactAttributeType(accountArtifactName,
+                        #                               BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                        #                               "Account Hash")
+                        # except:
+                        #     self.log(Level.WARNING, logHeader + "Attribute already added: " + accountArtifactName)
+                        # art = file.newArtifact(accountArtifact)
+                        # accountAttribute = case.getAttributeType(accountAttribute)
+                        # with open(passwordFile, "r") as accountFile:
+                        #     for line in accountFile:
+                        #         art.addAttribute(BlackboardAttribute(accountAttribute, VolatilityIngestModuleFactory.moduleName, line))
+
+                        # Process
+                        try:
+                            statement = connection.createStatement()
+                            resultSet = statement.executeQuery("SELECT DISTINCT "
+                                                               "p.PID, "
+                                                               "p.Name, "
+                                                               "p.PPID, "
+                                                               "p.[Offset(V)], "
+                                                               "n.LocalAddr, "
+                                                               "n.ForeignAddr, "
+                                                               "n.State, "
+                                                               "n.Created, "
+                                                               "p.[Time Created] AS [Process Time Created], "
+                                                               "p.[Time Exited] AS [Process Time Exited] "
+                                                               "FROM PSScan p "
+                                                               "LEFT JOIN Netscan n ON n.[PID] = p.[PID]")
+
+                            try:
+                                case.addArtifactAttributeType(processArtifactName + "_PID",
+                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                                                          "PID")
+                            except:
+                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_PID")
+                            try:
+                                case.addArtifactAttributeType(processArtifactName + "_Name",
+                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                                                          "Name")
+                            except:
+                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_Name")
+                            try:
+                                case.addArtifactAttributeType(processArtifactName + "_PPID",
+                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                                                          "PPID")
+                            except:
+                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_PPID")
+                            try:
+                                case.addArtifactAttributeType(processArtifactName + "_Offset",
+                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                                                          "Offset Virtual")
+                            except:
+                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_Offset")
+                            try:
+                                case.addArtifactAttributeType(processArtifactName + "_LocalAddr",
+                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                                                          "Local Address")
+                            except:
+                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_LocalAddr")
+                            try:
+                                case.addArtifactAttributeType(processArtifactName + "_ForeignAddr",
+                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                                                          "Foreign Address")
+                            except:
+                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_ForeignAddr")
+                            try:
+                                case.addArtifactAttributeType(processArtifactName + "_State",
+                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                                                          "State")
+                            except:
+                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_State")
+                            try:
+                                case.addArtifactAttributeType(processArtifactName + "_Created",
+                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                                                          "Created")
+                            except:
+                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_Created")
+                            try:
+                                case.addArtifactAttributeType(processArtifactName + "_ProcessTimeCreated",
+                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                                                          "Process Time Created")
+                            except:
+                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_ProcessTimeCreated")
+                            try:
+                                case.addArtifactAttributeType(processArtifactName + "_ProcessTimeExited",
+                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                                                          "Process Time Exited")
+                            except:
+                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_ProcessTimeExited")
+
+                            proc = file.newArtifact(processArtifact)
+                            pid = case.getAttributeType(processArtifactName + "_PID")
+                            name = case.getAttributeType(processArtifactName + "_Name")
+                            ppid = case.getAttributeType(processArtifactName + "_PPID")
+                            offset = case.getAttributeType(processArtifactName + "_Offset")
+                            local = case.getAttributeType(processArtifactName + "_LocalAddr")
+                            foreign = case.getAttributeType(processArtifactName + "_ForeignAddr")
+                            state = case.getAttributeType(processArtifactName + "_State")
+                            created = case.getAttributeType(processArtifactName + "_Created")
+                            pcreated = case.getAttributeType(processArtifactName + "_ProcessTimeCreated")
+                            pexited = case.getAttributeType(processArtifactName + "_ProcessTimeExited")
+
+                            num = 1
+                            while resultSet.next():
+                                proc.addAttribute(BlackboardAttribute(pid,
+                                                                      VolatilityIngestModuleFactory.moduleName,
+                                                                      resultSet.getString("PID")))
+                                proc.addAttribute(BlackboardAttribute(name,
+                                                                      VolatilityIngestModuleFactory.moduleName,
+                                                                      resultSet.getString("Name")))
+                                proc.addAttribute(BlackboardAttribute(ppid,
+                                                                      VolatilityIngestModuleFactory.moduleName,
+                                                                      resultSet.getString("PPID")))
+                                proc.addAttribute(BlackboardAttribute(offset,
+                                                                      VolatilityIngestModuleFactory.moduleName,
+                                                                      resultSet.getString("Offset(V)")))
+                                proc.addAttribute(BlackboardAttribute(local,
+                                                                      VolatilityIngestModuleFactory.moduleName,
+                                                                      resultSet.getString("LocalAddr")))
+                                proc.addAttribute(BlackboardAttribute(foreign,
+                                                                      VolatilityIngestModuleFactory.moduleName,
+                                                                      resultSet.getString("ForeignAddr")))
+                                proc.addAttribute(BlackboardAttribute(state,
+                                                                      VolatilityIngestModuleFactory.moduleName,
+                                                                      resultSet.getString("State")))
+                                proc.addAttribute(BlackboardAttribute(created,
+                                                                      VolatilityIngestModuleFactory.moduleName,
+                                                                      resultSet.getString("Created")))
+                                proc.addAttribute(BlackboardAttribute(pcreated,
+                                                                      VolatilityIngestModuleFactory.moduleName,
+                                                                      resultSet.getString("Process Time Created")))
+                                proc.addAttribute(BlackboardAttribute(pexited,
+                                                                      VolatilityIngestModuleFactory.moduleName,
+                                                                      resultSet.getString("Process Time Exited")))
+
+                                self.log(Level.INFO, logHeader + "Added " + str(num))
+                                num += 1
+
+                                IngestServices.getInstance().fireModuleDataEvent(ModuleDataEvent(VolatilityIngestModuleFactory.moduleName,
+                                                                                 processArtifactType, None))
+
+                        except SQLException as ex:
+                            self.log(Level.SEVERE, logHeader + "Cannot continue analysis due to database errors: " + ex.getMessage())
+
                     except SQLException as ex:
-                        self.log(Level.SEVERE, logHeader + "Cannot continue scan due to database errors: " + ex.getMessage())
-                        return IngestModule.ProcessResult.ERROR
-                    progressBar.progress("Running hashdump", self.progressCount(currentProcess, currentFile))
-                    currentProcess += 1
-                    self.log(Level.INFO, logHeader + "Running hashdump...")
-                    pipe = VolatilityService.getPasswords(filePathToProcess, systemVirtualAddress, samVirtualAddress, passwordFile)
-                    result = pipe.communicate()
-                    self.log(Level.INFO, logHeader + "Hashdump result: " + str(result))
+                        self.log(Level.SEVERE, logHeader + "Cannot open database due to database errors: " + ex.getMessage())
 
-                    # Hivedump
-                    try:
-                        statement = connection.createStatement()
-                        resultset = statement.executeQuery("SELECT Virtual FROM HiveList")
-                        virtualAddresses = []
-                        while resultset.next():
-                            virtualAddresses.append(resultset.getString("Virtual"))
+                    if connection is not None:
+                        try:
+                            connection.close()
+                        except SQLException as e:
+                            self.log(Level.WARNING, logHeader + "Could not close database: " + e.getMessage())
 
-                        resultset.close()
-                        statement.close()
-                        connection.close()
-
-                        progressBar.progress("Running hivedump", self.progressCount(currentProcess, currentFile))
-                        currentProcess += 1
-
-                        self.log(Level.INFO, logHeader + "Running hivedump for registries")
-                        self.log(Level.INFO, logHeader + "Number of addresses to dump: " + str(len(virtualAddresses)))
-                        addressNum = 1
-                        for address in virtualAddresses:
-                            self.log(Level.INFO, logHeader + "Running address number: " + str(addressNum))
-                            pipe = VolatilityService.hivedump(filePathToProcess, address)
-                            self.log(Level.INFO, logHeader + "Hivedump result: " + str(pipe.communicate()))
-                            addressNum += 1
-                    except SQLException as ex:
-                        self.log(Level.SEVERE, logHeader + "Cannot continue scan due to database errors: " + ex.getMessage())
-                        return IngestModule.ProcessResult.ERROR
-
-                    # Printkey
-                    try:
-                        self.log(Level.INFO, logHeader + "Connecting to db")
-                        Class.forName("org.sqlite.JDBC").newInstance()
-                        connection = DriverManager.getConnection("jdbc:sqlite:/%s" % dbName)
-
-                        statement1 = connection.createStatement()
-                        resultset1 = statement1.executeQuery("SELECT Key FROM HiveDump")
-                        keys = []
-                        while resultset1.next():
-                            keys.append(resultset1.getString("Key"))
-
-                        resultset1.close()
-                        statement1.close()
-                        connection.close()
-
-                        self.log(Level.INFO, logHeader + "Number of keys to print: " + str(len(keys)))
-                        progressBar.progress("Running printkey", self.progressCount(currentProcess, currentFile))
-                        currentProcess += 1
-
-                        self.log(Level.INFO, logHeader + "Running Printkey...")
-                        for key in keys:
-                            self.log(Level.INFO, logHeader + "Printing key: " + key)
-                            pipe = VolatilityService.printkey(filePathToProcess, key)
-                            self.log(Level.INFO, logHeader + "Printkey result: " + str(pipe.communicate()))
-                    except SQLException as ex:
-                        self.log(Level.SEVERE, logHeader + "Cannot continue scan due to database errors: " + ex.getMessage())
-                        return IngestModule.ProcessResult.ERROR
-
-                    # Netscan
-                    progressBar.progress("Running netscan", self.progressCount(currentProcess, currentFile))
-                    currentProcess += 1
-                    self.log(Level.INFO, logHeader + "Running netscan...")
-                    pipe = VolatilityService.netscan(filePathToProcess)
-                    self.log(Level.INFO, logHeader + "Netscan results: " + str(pipe.communicate()))
-
-                    # Lsadump
-                    progressBar.progress("Running lsadump", self.progressCount(currentProcess, currentFile))
-                    currentProcess += 1
-                    self.log(Level.INFO, logHeader + "Running lsadump...")
-                    pipe = VolatilityService.lsadump(filePathToProcess, lsadumpFile)
-                    self.log(Level.INFO, logHeader + "Lsadump results: " + str(pipe.communicate()))
-
-                    inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
-                                                        "Dumping memory contents for " + fileName)
-                    IngestServices.getInstance().postMessage(inbox)
-
-                    # Dlldump
-                    progressBar.progress("Running dlldump", self.progressCount(currentProcess, currentFile))
-                    currentProcess += 1
-                    self.log(Level.INFO, logHeader + "Running dlldump...")
-                    pipe = VolatilityService.dlldump(filePathToProcess, dllDumpDir)
-                    self.log(Level.INFO, logHeader + "Dlldump results: " + str(pipe.communicate()))
-
-                    # Dumpregistry
-                    progressBar.progress("Running dumpregistry", self.progressCount(currentProcess, currentFile))
-                    currentProcess += 1
-                    self.log(Level.INFO, logHeader + "Running dumpregistry...")
-                    pipe = VolatilityService.dumpregistry(filePathToProcess, dumpRegistryDir)
-                    self.log(Level.INFO, logHeader + "Dumpregistry results: " + str(pipe.communicate()))
-
-                    # Procdump
-                    try:
-                        progressBar.progress("Running procdump", self.progressCount(currentProcess, currentFile))
-                        currentProcess += 1
-
-                        Class.forName("org.sqlite.JDBC").newInstance()
-                        connection = DriverManager.getConnection("jdbc:sqlite:/%s" % dbName)
-
-                        statement = connection.createStatement()
-                        resultset1 = statement.executeQuery("SELECT DISTINCT PID FROM PSScan")
-                        pids = []
-                        while resultset1.next():
-                            pids.append(resultset1.getString("PID"))
-
-                        resultset1.close()
-                        statement.close()
-                        connection.close()
-
-                        self.log(Level.INFO, logHeader + "Number of unique processes to dump: " + str(len(pids)))
-                        pidNum = 1
-                        for pid in pids:
-                            self.log(Level.INFO, logHeader + "Running process number: " + str(pidNum))
-                            pipe = VolatilityService.procdump(filePathToProcess, pid, procDumpDir)
-                            self.log(Level.INFO, logHeader + "Procdump result: " + str(pipe.communicate()))
-                            pidNum += 1
-                    except SQLException as ex:
-                            self.log(Level.SEVERE, logHeader + "Cannot continue scan due to database errors: " + ex.getMessage())
-                            return IngestModule.ProcessResult.ERROR
-
-                if connection is not None:
-                    try:
-                        connection.close()
-                    except SQLException as e:
-                        self.log(Level.WARNING, logHeader + "Could not close database: " + e.getMessage())
-
-                currentFile += 1
+                    currentFile += 1
 
         return IngestModule.ProcessResult.OK
 

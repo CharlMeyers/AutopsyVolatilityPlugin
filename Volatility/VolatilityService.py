@@ -21,18 +21,18 @@ class VolatilityServiceClass:
                       "--output=text", "--output-file=" + fileName], stdout=PIPE, stderr=PIPE)
         return pipe
 
-    def hivedump(self, file, address):
+    def hivedump(self, file, address, output):
         pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "hivedump", "-o", address,
-                      "--output=sqlite", "--output-file=" + self.database], stdout=PIPE, stderr=PIPE)
+                      "--output=json", "--output-file=" + output], stdout=PIPE, stderr=PIPE)
         return pipe
 
-    def printkey(self, file, key):
-        pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "printkey", "-K", key,
-                      "--output=sqlite", "--output-file=" + self.database], stdout=PIPE, stderr=PIPE)
+    def pslist(self, file):
+        pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "pslist", "--output=sqlite",
+                      "--output-file=" + self.database], stdout=PIPE, stderr=PIPE)
         return pipe
 
     def psscan(self, file):
-        pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "psscan", "--output=sqlite",
+        pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "psscan", "-V", "--output=sqlite",
                       "--output-file=" + self.database], stdout=PIPE, stderr=PIPE)
         return pipe
 
@@ -42,13 +42,8 @@ class VolatilityServiceClass:
         return pipe
 
     def netscan(self, file):
-        pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "netscan", "--output=sqlite",
+        pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "netscan", "-V", "--output=sqlite",
                       "--output-file=" + self.database], stdout=PIPE, stderr=PIPE)
-        return pipe
-
-    def lsadump(self, file, outputFile):
-        pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "lsadump",
-                      "--output=text", "--output-file=" + outputFile], stdout=PIPE, stderr=PIPE)
         return pipe
 
     def dlldump(self, file, outputDir):
@@ -65,6 +60,4 @@ class VolatilityServiceClass:
         pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "procdump", "-D", outputDir,
                       "-p", processId], stdout=PIPE, stderr=PIPE)
         return pipe
-
-    # def dumpfiles(self, file, ):
 
