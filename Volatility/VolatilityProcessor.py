@@ -1,7 +1,7 @@
 import inspect
 import os
 import hashlib
-import time
+import json
 from VolatilityService import VolatilityServiceClass
 
 from java.awt import GridBagLayout
@@ -17,8 +17,6 @@ from javax.swing.filechooser import FileNameExtensionFilter
 from java.util.logging import Level
 from java.sql import DriverManager, SQLException
 from java.lang import Class
-from java.lang import System
-from java.lang import Exception
 
 from org.sleuthkit.autopsy.ingest import IngestModuleFactoryAdapter
 from org.sleuthkit.autopsy.ingest import IngestModuleIngestJobSettingsPanel
@@ -695,6 +693,39 @@ class VolatilityIngestModule(DataSourceIngestModule):
                     #         pipe = VolatilityService.hivedump(filePathToProcess, address, hiveDumpDir + "\\" + str(address) + ".json")
                     #         self.log(Level.INFO, logHeader + "Hivedump result: " + str(pipe.communicate()))
                     #         addressNum += 1
+                    # try:
+                    #     Class.forName("org.sqlite.JDBC").newInstance()
+                    #     connection = DriverManager.getConnection("jdbc:sqlite:/%s" % dbName)
+                    #
+                    #     statement = connection.createStatement()
+                    #     result = statement.executeQuery("SELECT COUNT(name) AS NumTables FROM sqlite_master WHERE name LIKE 'HiveDump'")
+                    #     numTables = result.getInt("NumTables")
+                    #     if numTables == 0:
+                    #         try:
+                    #             preparedStatement = connection.prepareStatement("CREATE TABLE HiveDump ([Offset(V)] TEXT, LastWritten TEXT, Key TEXT)")
+                    #             preparedStatement.executeUpdate()
+                    #         except SQLException as ex:
+                    #             self.log(Level.WARNING, logHeader + "Error creating HiveDump: " + ex.getMessage())
+                    #
+                    #     for hiveDumpFile in os.listdir(hiveDumpDir):
+                    #         if hiveDumpFile.endswith(".json"):
+                    #             hiveDumpFileName = os.path.basename(hiveDumpFile)
+                    #             offset = os.path.splitext(hiveDumpFileName)[0]
+                    #             with open(hiveDumpDir + "\\" + hiveDumpFileName, "r") as hiveDump:
+                    #                 for line in hiveDump:
+                    #                     result = json.loads(line)
+                    #                     for item in result["rows"]:
+                    #                         lastWritten = item[0]
+                    #                         key = item[1]
+                    #
+                    #                         preparedStatement = connection.prepareStatement("INSERT INTO HiveDump ([Offset(V)], LastWritten, Key) "
+                    #                                                                         "VALUES (?, ?, ?)")
+                    #                         preparedStatement.setString(1, offset)
+                    #                         preparedStatement.setString(2, lastWritten)
+                    #                         preparedStatement.setString(3, key)
+                    #                         preparedStatement.executeUpdate()
+                    # except SQLException as ex:
+                    #     self.log(Level.SEVERE, logHeader + "Cannot insert into HiveDump table: " + ex.getMessage())
                     # except SQLException as ex:
                     #     self.log(Level.SEVERE, logHeader + "Cannot continue scan due to database errors: " + ex.getMessage())
                     #     # return IngestModule.ProcessResult.ERROR
@@ -739,43 +770,43 @@ class VolatilityIngestModule(DataSourceIngestModule):
                     #         # return IngestModule.ProcessResult.ERROR
 
                     # Analyse
-                    inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
-                                                        "Analysing results for " + fileName)
-                    IngestServices.getInstance().postMessage(inbox)
-
-                    progressBar.progress("Analysing results", self.progressCount(currentProcess, currentFile))
-                    currentProcess += 1
-
-                    try:
-                        Class.forName("org.sqlite.JDBC").newInstance()
-                        connection = DriverManager.getConnection("jdbc:sqlite:/%s" % dbName)
-
-                        processArtifactName = ""
-                        registryArtifactName = ""
-                        accountArtifactName = ""
-                        fileArtifactName = ""
-
-                        try:
-                            processArtifactName = "VolatilityProcessor_Processes_" + fileName
-                            registryArtifactName = "VolatilityProcessor_Registries_" + fileName
-                            accountArtifactName = "VolatilityProcessor_Accounts_" + fileName
-                            fileArtifactName = "VolatilityProcessor_Files_" + fileName
-
-                            case.addArtifactType(processArtifactName, processArtifactName)
-                            case.addArtifactType(registryArtifactName, registryArtifactName)
-                            case.addArtifactType(accountArtifactName, accountArtifactName)
-                            case.addArtifactType(fileArtifactName, fileArtifactName)
-                        except:
-                            self.log(Level.WARNING, logHeader + "Error creating artifacts, some artifacts might not exist")
-
-                        processArtifact = case.getArtifactTypeID(processArtifactName)
-                        processArtifactType = case.getArtifactType(processArtifactName)
-                        registryArtifact = case.getArtifactTypeID(registryArtifactName)
-                        registryArtifactType = case.getArtifactType(registryArtifactName)
-                        accountArtifact = case.getArtifactTypeID(accountArtifactName)
-                        accountArtifactType = case.getArtifactType(accountArtifactName)
-                        fileArtifact = case.getArtifactTypeID(fileArtifactName)
-                        fileArtifactType = case.getArtifactType(fileArtifactName)
+                    # inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
+                    #                                     "Analysing results for " + fileName)
+                    # IngestServices.getInstance().postMessage(inbox)
+                    #
+                    # progressBar.progress("Analysing results", self.progressCount(currentProcess, currentFile))
+                    # currentProcess += 1
+                    #
+                    # try:
+                    #     Class.forName("org.sqlite.JDBC").newInstance()
+                    #     connection = DriverManager.getConnection("jdbc:sqlite:/%s" % dbName)
+                    #
+                    #     processArtifactName = ""
+                    #     registryArtifactName = ""
+                    #     accountArtifactName = ""
+                    #     fileArtifactName = ""
+                    #
+                    #     try:
+                    #         processArtifactName = "VolatilityProcessor_Processes_" + fileName
+                    #         registryArtifactName = "VolatilityProcessor_Registries_" + fileName
+                    #         accountArtifactName = "VolatilityProcessor_Accounts_" + fileName
+                    #         fileArtifactName = "VolatilityProcessor_Files_" + fileName
+                    #
+                    #         case.addArtifactType(processArtifactName, processArtifactName)
+                    #         case.addArtifactType(registryArtifactName, registryArtifactName)
+                    #         case.addArtifactType(accountArtifactName, accountArtifactName)
+                    #         case.addArtifactType(fileArtifactName, fileArtifactName)
+                    #     except:
+                    #         self.log(Level.WARNING, logHeader + "Error creating artifacts, some artifacts might not exist")
+                    #
+                    #     processArtifact = case.getArtifactTypeID(processArtifactName)
+                    #     processArtifactType = case.getArtifactType(processArtifactName)
+                    #     registryArtifact = case.getArtifactTypeID(registryArtifactName)
+                    #     registryArtifactType = case.getArtifactType(registryArtifactName)
+                    #     accountArtifact = case.getArtifactTypeID(accountArtifactName)
+                    #     accountArtifactType = case.getArtifactType(accountArtifactName)
+                    #     fileArtifact = case.getArtifactTypeID(fileArtifactName)
+                    #     fileArtifactType = case.getArtifactType(fileArtifactName)
 
                         # Account
                         # try:
@@ -791,136 +822,135 @@ class VolatilityIngestModule(DataSourceIngestModule):
                         #         art.addAttribute(BlackboardAttribute(accountAttribute, VolatilityIngestModuleFactory.moduleName, line))
 
                         # Process
-                        try:
-                            statement = connection.createStatement()
-                            resultSet = statement.executeQuery("SELECT DISTINCT "
-                                                               "p.PID, "
-                                                               "p.Name, "
-                                                               "p.PPID, "
-                                                               "p.[Offset(V)], "
-                                                               "n.LocalAddr, "
-                                                               "n.ForeignAddr, "
-                                                               "n.State, "
-                                                               "n.Created, "
-                                                               "p.[Time Created] AS [Process Time Created], "
-                                                               "p.[Time Exited] AS [Process Time Exited] "
-                                                               "FROM PSScan p "
-                                                               "LEFT JOIN Netscan n ON n.[PID] = p.[PID]")
+                        # try:
+                        #     statement = connection.createStatement()
+                        #     resultSet = statement.executeQuery("SELECT DISTINCT "
+                        #                                        "p.PID, "
+                        #                                        "p.Name, "
+                        #                                        "p.PPID, "
+                        #                                        "p.[Offset(V)], "
+                        #                                        "n.LocalAddr, "
+                        #                                        "n.ForeignAddr, "
+                        #                                        "n.State, "
+                        #                                        "n.Created, "
+                        #                                        "p.[Time Created] AS [Process Time Created], "
+                        #                                        "p.[Time Exited] AS [Process Time Exited] "
+                        #                                        "FROM PSScan p "
+                        #                                        "LEFT JOIN Netscan n ON n.[PID] = p.[PID]")
+                        #
+                        #     try:
+                        #         case.addArtifactAttributeType(processArtifactName + "_PID",
+                        #                                   BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                        #                                   "PID")
+                        #     except:
+                        #         self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_PID")
+                        #     try:
+                        #         case.addArtifactAttributeType(processArtifactName + "_Name",
+                        #                                   BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                        #                                   "Name")
+                        #     except:
+                        #         self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_Name")
+                        #     try:
+                        #         case.addArtifactAttributeType(processArtifactName + "_PPID",
+                        #                                   BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                        #                                   "PPID")
+                        #     except:
+                        #         self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_PPID")
+                        #     try:
+                        #         case.addArtifactAttributeType(processArtifactName + "_Offset",
+                        #                                   BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                        #                                   "Offset Virtual")
+                        #     except:
+                        #         self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_Offset")
+                        #     try:
+                        #         case.addArtifactAttributeType(processArtifactName + "_LocalAddr",
+                        #                                   BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                        #                                   "Local Address")
+                        #     except:
+                        #         self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_LocalAddr")
+                        #     try:
+                        #         case.addArtifactAttributeType(processArtifactName + "_ForeignAddr",
+                        #                                   BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                        #                                   "Foreign Address")
+                        #     except:
+                        #         self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_ForeignAddr")
+                        #     try:
+                        #         case.addArtifactAttributeType(processArtifactName + "_State",
+                        #                                   BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                        #                                   "State")
+                        #     except:
+                        #         self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_State")
+                        #     try:
+                        #         case.addArtifactAttributeType(processArtifactName + "_Created",
+                        #                                   BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                        #                                   "Created")
+                        #     except:
+                        #         self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_Created")
+                        #     try:
+                        #         case.addArtifactAttributeType(processArtifactName + "_ProcessTimeCreated",
+                        #                                   BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                        #                                   "Process Time Created")
+                        #     except:
+                        #         self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_ProcessTimeCreated")
+                        #     try:
+                        #         case.addArtifactAttributeType(processArtifactName + "_ProcessTimeExited",
+                        #                                   BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                        #                                   "Process Time Exited")
+                        #     except:
+                        #         self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_ProcessTimeExited")
+                        #
+                        #     pid = case.getAttributeType(processArtifactName + "_PID")
+                        #     name = case.getAttributeType(processArtifactName + "_Name")
+                        #     ppid = case.getAttributeType(processArtifactName + "_PPID")
+                        #     offset = case.getAttributeType(processArtifactName + "_Offset")
+                        #     local = case.getAttributeType(processArtifactName + "_LocalAddr")
+                        #     foreign = case.getAttributeType(processArtifactName + "_ForeignAddr")
+                        #     state = case.getAttributeType(processArtifactName + "_State")
+                        #     created = case.getAttributeType(processArtifactName + "_Created")
+                        #     pcreated = case.getAttributeType(processArtifactName + "_ProcessTimeCreated")
+                        #     pexited = case.getAttributeType(processArtifactName + "_ProcessTimeExited")
+                        #
+                        #     while resultSet.next():
+                        #         proc = file.newArtifact(processArtifact)
+                        #         proc.addAttribute(BlackboardAttribute(pid,
+                        #                                               VolatilityIngestModuleFactory.moduleName,
+                        #                                               resultSet.getString("PID")))
+                        #         proc.addAttribute(BlackboardAttribute(name,
+                        #                                               VolatilityIngestModuleFactory.moduleName,
+                        #                                               resultSet.getString("Name")))
+                        #         proc.addAttribute(BlackboardAttribute(ppid,
+                        #                                               VolatilityIngestModuleFactory.moduleName,
+                        #                                               resultSet.getString("PPID")))
+                        #         proc.addAttribute(BlackboardAttribute(offset,
+                        #                                               VolatilityIngestModuleFactory.moduleName,
+                        #                                               resultSet.getString("Offset(V)")))
+                        #         proc.addAttribute(BlackboardAttribute(local,
+                        #                                               VolatilityIngestModuleFactory.moduleName,
+                        #                                               resultSet.getString("LocalAddr")))
+                        #         proc.addAttribute(BlackboardAttribute(foreign,
+                        #                                               VolatilityIngestModuleFactory.moduleName,
+                        #                                               resultSet.getString("ForeignAddr")))
+                        #         proc.addAttribute(BlackboardAttribute(state,
+                        #                                               VolatilityIngestModuleFactory.moduleName,
+                        #                                               resultSet.getString("State")))
+                        #         proc.addAttribute(BlackboardAttribute(created,
+                        #                                               VolatilityIngestModuleFactory.moduleName,
+                        #                                               resultSet.getString("Created")))
+                        #         proc.addAttribute(BlackboardAttribute(pcreated,
+                        #                                               VolatilityIngestModuleFactory.moduleName,
+                        #                                               resultSet.getString("Process Time Created")))
+                        #         proc.addAttribute(BlackboardAttribute(pexited,
+                        #                                               VolatilityIngestModuleFactory.moduleName,
+                        #                                               resultSet.getString("Process Time Exited")))
+                        #
+                        #         IngestServices.getInstance().fireModuleDataEvent(ModuleDataEvent(VolatilityIngestModuleFactory.moduleName,
+                        #                                                          processArtifactType, None))
+                        #
+                        # except SQLException as ex:
+                        #     self.log(Level.SEVERE, logHeader + "Cannot continue analysis due to database errors: " + ex.getMessage())
 
-                            try:
-                                case.addArtifactAttributeType(processArtifactName + "_PID",
-                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
-                                                          "PID")
-                            except:
-                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_PID")
-                            try:
-                                case.addArtifactAttributeType(processArtifactName + "_Name",
-                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
-                                                          "Name")
-                            except:
-                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_Name")
-                            try:
-                                case.addArtifactAttributeType(processArtifactName + "_PPID",
-                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
-                                                          "PPID")
-                            except:
-                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_PPID")
-                            try:
-                                case.addArtifactAttributeType(processArtifactName + "_Offset",
-                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
-                                                          "Offset Virtual")
-                            except:
-                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_Offset")
-                            try:
-                                case.addArtifactAttributeType(processArtifactName + "_LocalAddr",
-                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
-                                                          "Local Address")
-                            except:
-                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_LocalAddr")
-                            try:
-                                case.addArtifactAttributeType(processArtifactName + "_ForeignAddr",
-                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
-                                                          "Foreign Address")
-                            except:
-                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_ForeignAddr")
-                            try:
-                                case.addArtifactAttributeType(processArtifactName + "_State",
-                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
-                                                          "State")
-                            except:
-                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_State")
-                            try:
-                                case.addArtifactAttributeType(processArtifactName + "_Created",
-                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
-                                                          "Created")
-                            except:
-                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_Created")
-                            try:
-                                case.addArtifactAttributeType(processArtifactName + "_ProcessTimeCreated",
-                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
-                                                          "Process Time Created")
-                            except:
-                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_ProcessTimeCreated")
-                            try:
-                                case.addArtifactAttributeType(processArtifactName + "_ProcessTimeExited",
-                                                          BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
-                                                          "Process Time Exited")
-                            except:
-                                self.log(Level.WARNING, logHeader + "Attribute already added: " + processArtifactName + "_ProcessTimeExited")
+                        #     Registry
 
-                            proc = file.newArtifact(processArtifact)
-                            pid = case.getAttributeType(processArtifactName + "_PID")
-                            name = case.getAttributeType(processArtifactName + "_Name")
-                            ppid = case.getAttributeType(processArtifactName + "_PPID")
-                            offset = case.getAttributeType(processArtifactName + "_Offset")
-                            local = case.getAttributeType(processArtifactName + "_LocalAddr")
-                            foreign = case.getAttributeType(processArtifactName + "_ForeignAddr")
-                            state = case.getAttributeType(processArtifactName + "_State")
-                            created = case.getAttributeType(processArtifactName + "_Created")
-                            pcreated = case.getAttributeType(processArtifactName + "_ProcessTimeCreated")
-                            pexited = case.getAttributeType(processArtifactName + "_ProcessTimeExited")
-
-                            num = 1
-                            while resultSet.next():
-                                proc.addAttribute(BlackboardAttribute(pid,
-                                                                      VolatilityIngestModuleFactory.moduleName,
-                                                                      resultSet.getString("PID")))
-                                proc.addAttribute(BlackboardAttribute(name,
-                                                                      VolatilityIngestModuleFactory.moduleName,
-                                                                      resultSet.getString("Name")))
-                                proc.addAttribute(BlackboardAttribute(ppid,
-                                                                      VolatilityIngestModuleFactory.moduleName,
-                                                                      resultSet.getString("PPID")))
-                                proc.addAttribute(BlackboardAttribute(offset,
-                                                                      VolatilityIngestModuleFactory.moduleName,
-                                                                      resultSet.getString("Offset(V)")))
-                                proc.addAttribute(BlackboardAttribute(local,
-                                                                      VolatilityIngestModuleFactory.moduleName,
-                                                                      resultSet.getString("LocalAddr")))
-                                proc.addAttribute(BlackboardAttribute(foreign,
-                                                                      VolatilityIngestModuleFactory.moduleName,
-                                                                      resultSet.getString("ForeignAddr")))
-                                proc.addAttribute(BlackboardAttribute(state,
-                                                                      VolatilityIngestModuleFactory.moduleName,
-                                                                      resultSet.getString("State")))
-                                proc.addAttribute(BlackboardAttribute(created,
-                                                                      VolatilityIngestModuleFactory.moduleName,
-                                                                      resultSet.getString("Created")))
-                                proc.addAttribute(BlackboardAttribute(pcreated,
-                                                                      VolatilityIngestModuleFactory.moduleName,
-                                                                      resultSet.getString("Process Time Created")))
-                                proc.addAttribute(BlackboardAttribute(pexited,
-                                                                      VolatilityIngestModuleFactory.moduleName,
-                                                                      resultSet.getString("Process Time Exited")))
-
-                                self.log(Level.INFO, logHeader + "Added " + str(num))
-                                num += 1
-
-                                IngestServices.getInstance().fireModuleDataEvent(ModuleDataEvent(VolatilityIngestModuleFactory.moduleName,
-                                                                                 processArtifactType, None))
-
-                        except SQLException as ex:
-                            self.log(Level.SEVERE, logHeader + "Cannot continue analysis due to database errors: " + ex.getMessage())
 
                     except SQLException as ex:
                         self.log(Level.SEVERE, logHeader + "Cannot open database due to database errors: " + ex.getMessage())
