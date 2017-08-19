@@ -764,16 +764,16 @@ class VolatilityIngestModule(DataSourceIngestModule):
 
                         statement = connection.createStatement()
                         resultset1 = statement.executeQuery("SELECT DISTINCT PID FROM PSList")
-                        pids = []
+                        pids = ""
                         while resultset1.next():
-                            pids.append(resultset1.getString("PID"))
+                            pids += resultset1.getString("PID") + ", "
 
                         resultset1.close()
                         statement.close()
                         connection.close()
 
                         self.log(Level.INFO, logHeader + "Number of unique processes to dump: " + str(len(pids)))
-                        pipe = VolatilityService.procdump(filePathToProcess, pids, procDumpDir)
+                        pipe = VolatilityService.procdump(filePathToProcess, pids[:-2], procDumpDir)
                         self.log(Level.INFO, logHeader + "Procdump result: " + str(pipe.communicate()))
                     except SQLException as ex:
                             self.log(Level.SEVERE, logHeader + "Cannot continue scan due to database errors: " + ex.getMessage())
@@ -826,7 +826,7 @@ class VolatilityIngestModule(DataSourceIngestModule):
                         except:
                             self.log(Level.WARNING, logHeader + "Attribute already added: " + accountArtifactName)
                         art = file.newArtifact(accountArtifact)
-                        accountAttribute = case.getAttributeType(accountAttribute)
+                        accountAttribute = case.getAttributeType(accountArtifactName)
                         with open(passwordFile, "r") as accountFile:
                             for line in accountFile:
                                 art.addAttribute(BlackboardAttribute(accountAttribute, VolatilityIngestModuleFactory.moduleName, line))
