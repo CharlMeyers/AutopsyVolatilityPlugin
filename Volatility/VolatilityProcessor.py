@@ -578,7 +578,7 @@ class VolatilityIngestModule(DataSourceIngestModule):
         IngestServices.getInstance().postMessage(inbox)
 
         # Processing
-        self.processCount = 10
+        self.processCount = 11
         progressBar.switchToDeterminate(self.progressCount(self.processCount, numFiles))
         VolatilityService = VolatilityServiceClass(self.VolatilityDir, self.Profile)
         currentFile = 1
