@@ -37,7 +37,7 @@ class VolatilityServiceClass:
         return pipe
 
     def filescan(self, file):
-        pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "filescan", "--output=sqlite",
+        pipe = Popen([self.volatility, "-f", file, "--profile=" + self.profile, "filescan", "-V", "--output=sqlite",
                       "--output-file=" + self.database], stdout=PIPE, stderr=PIPE)
         return pipe
 

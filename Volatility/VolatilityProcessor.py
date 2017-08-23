@@ -814,7 +814,6 @@ class VolatilityIngestModule(DataSourceIngestModule):
                         registryArtifact = case.getArtifactTypeID(registryArtifactName)
                         registryArtifactType = case.getArtifactType(registryArtifactName)
                         accountArtifact = case.getArtifactTypeID(accountArtifactName)
-                        accountArtifactType = case.getArtifactType(accountArtifactName)
                         fileArtifact = case.getArtifactTypeID(fileArtifactName)
                         fileArtifactType = case.getArtifactType(fileArtifactName)
 
@@ -1034,6 +1033,89 @@ class VolatilityIngestModule(DataSourceIngestModule):
                         except SQLException as ex:
                             self.log(Level.SEVERE, logHeader + "Cannot continue analysis due to database errors: " + ex.getMessage())
 
+                        # File
+                        try:
+                            statement1 = connection.createStatement()
+                            resultSet1 = statement1.executeQuery("SELECT COUNT(Name) AS RowCount FROM FileScan")
+
+                            rowCount = resultSet1.getInt("RowCount")
+                            self.log(Level.INFO, logHeader + "Filecan row count: " + str(rowCount))
+                            if rowCount > 0:
+                                statement2 = connection.createStatement()
+                                resultSet2 = statement2.executeQuery("SELECT "
+                                                                   "Name, "
+                                                                   "Access, "
+                                                                   "[Offset(V)], "
+                                                                   "Pointers,"
+                                                                   "Handles "
+                                                                   "FROM FileScan")
+
+                                try:
+                                    case.addArtifactAttributeType(fileArtifactName + "_Name",
+                                                                  BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                                                                  "File Name")
+                                except:
+                                    self.log(Level.WARNING, logHeader + "Attribute already added: " + fileArtifactName + "_Name")
+                                try:
+                                    case.addArtifactAttributeType(fileArtifactName + "_Access",
+                                                                  BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                                                                  "File Access Rights")
+                                except:
+                                    self.log(Level.WARNING, logHeader + "Attribute already added: " + fileArtifactName + "_Access")
+                                try:
+                                    case.addArtifactAttributeType(fileArtifactName + "_Virtual",
+                                                                  BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                                                                  "Virtual Address")
+                                except:
+                                    self.log(Level.WARNING, logHeader + "Attribute already added: " + fileArtifactName + "_Virtual")
+                                try:
+                                    case.addArtifactAttributeType(fileArtifactName + "_Pointers",
+                                                                  BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                                                                  "Pointers")
+                                except:
+                                    self.log(Level.WARNING, logHeader + "Attribute already added: " + fileArtifactName + "_Pointers")
+                                try:
+                                    case.addArtifactAttributeType(fileArtifactName + "_Handles",
+                                                                  BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE.STRING,
+                                                                  "Handles")
+                                except:
+                                    self.log(Level.WARNING, logHeader + "Attribute already added: " + fileArtifactName + "_Handles")
+
+                                name = case.getAttributeType(fileArtifactName + "_Name")
+                                access = case.getAttributeType(fileArtifactName + "_Access")
+                                virtual = case.getAttributeType(fileArtifactName + "_Virtual")
+                                pointers = case.getAttributeType(fileArtifactName + "_Pointers")
+                                handles = case.getAttributeType(fileArtifactName + "_Handles")
+
+                                while resultSet2.next():
+                                    f = file.newArtifact(fileArtifact)
+                                    f.addAttribute(BlackboardAttribute(virtual,
+                                                                         VolatilityIngestModuleFactory.moduleName,
+                                                                         resultSet2.getString("Offset(V)")))
+                                    f.addAttribute(BlackboardAttribute(access,
+                                                                         VolatilityIngestModuleFactory.moduleName,
+                                                                         resultSet2.getString("Access")))
+                                    f.addAttribute(BlackboardAttribute(name,
+                                                                         VolatilityIngestModuleFactory.moduleName,
+                                                                         resultSet2.getString("Name")))
+                                    f.addAttribute(BlackboardAttribute(pointers,
+                                                                         VolatilityIngestModuleFactory.moduleName,
+                                                                         resultSet2.getString("Pointers")))
+                                    f.addAttribute(BlackboardAttribute(handles,
+                                                                         VolatilityIngestModuleFactory.moduleName,
+                                                                         resultSet2.getString("Handles")))
+
+                                    IngestServices.getInstance().fireModuleDataEvent(ModuleDataEvent(VolatilityIngestModuleFactory.moduleName,
+                                                                                                 fileArtifactType, None))
+                            else:
+                                self.log(Level.INFO, logHeader + "No results found for filescan, not posting results")
+                                inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
+                                                                    "No filecan results found for " + fileName)
+                                IngestServices.getInstance().postMessage(inbox)
+
+                        except SQLException as ex:
+                            self.log(Level.SEVERE, logHeader + "Cannot continue analysis due to database errors: " + ex.getMessage())
+
                     except SQLException as ex:
                         self.log(Level.SEVERE, logHeader + "Cannot open database due to database errors: " + ex.getMessage())
 
@@ -1049,7 +1131,7 @@ class VolatilityIngestModule(DataSourceIngestModule):
 
     def shutDown(self):
         inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
-                                            "Volatiity Process Stopped")
+                                            "Volatility Process Stopped")
         IngestServices.getInstance().postMessage(inbox)
 
         self.log(Level.INFO, "Volatility Processor Finished")
