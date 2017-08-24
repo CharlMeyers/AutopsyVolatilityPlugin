@@ -340,6 +340,3 @@ fabric.properties
 
 # Sqlite database file
 *.db
-
-#Zip files
-*.zip
