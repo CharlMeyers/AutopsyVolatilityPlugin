@@ -1127,6 +1127,11 @@ class VolatilityIngestModule(DataSourceIngestModule):
 
                     currentFile += 1
 
+            message = "<p>The dumped files can be found at: " + caseDir + "\\Dump_Files</p>"
+            inbox = IngestMessage.createMessage(IngestMessage.MessageType.INFO, "Volatility Processor",
+                                                "Finished analysing the results", message)
+        IngestServices.getInstance().postMessage(inbox)
+
         return IngestModule.ProcessResult.OK
 
     def shutDown(self):
