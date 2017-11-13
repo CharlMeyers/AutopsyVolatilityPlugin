@@ -21,3 +21,8 @@ The plugin in this repository is a modified version of his plugin. Most notably 
 
 ## How to install ##
 Firstly go to you can download DumpIt [here](http://qpdownload.com/dumpit/) if you do not have it already. The second thing you need to do is to download Volatility at [Volatility Foundation](http://www.volatilityfoundation.org/26) website. Then go to the releases page of this repository and download the **RAMCollector.exe** and **VolatilityProcessor.zip**. Make sure to put **RAMCollector.exe** and **DumpIt** executable in the same directory. Extract **VolatilityProcessor** into the Autopsy Python Modules folder. You can find that folder by clicking on Tools->Python Plugins in Autopsy. If you do not already have Autopsy you can download it from [here](https://www.sleuthkit.org/autopsy/download.php).
+
+## How to use ##
+Double click the RAM collector and follow the instructions to collect ram.
+
+For the plugin. Add the RAM dump to your case as a logical file. Select Volatility processor. Indicate the path to volatility and select the correct operating system profile. Make sure the hash file is in the same directory as the RAM dump. If successfull the plugin will continue to scan the file automatically.
